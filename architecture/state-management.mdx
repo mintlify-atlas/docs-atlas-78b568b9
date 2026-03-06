@@ -1,0 +1,610 @@
+---
+title: State Management
+description: Understanding provider-based state management and persistence in Numix
+---
+
+## Overview
+
+Numix uses the `provider` package for state management, combined with `SharedPreferences` for persistence. This architecture provides reactive UI updates while maintaining user data across app sessions.
+
+<Note>
+  The state management pattern in Numix enforces "dumb widgets" - all business logic, calculations, and state live in `ChangeNotifier` providers, not in UI components.
+</Note>
+
+## The Provider Pattern
+
+### What is Provider?
+
+Provider is a state management solution that uses Flutter's `InheritedWidget` to propagate state changes down the widget tree efficiently. When state changes, only widgets watching that state rebuild.
+
+### Key Benefits
+
+<CardGroup cols={2}>
+  <Card title="Reactive Updates" icon="bolt">
+    Widgets automatically rebuild when watched state changes, keeping UI in sync with data.
+  </Card>
+  
+  <Card title="Performance" icon="gauge-high">
+    Only widgets that watch specific state rebuild, maintaining 60/120 fps performance.
+  </Card>
+  
+  <Card title="Simplicity" icon="check">
+    Straightforward API with `context.read()` and `context.watch()` makes state management intuitive.
+  </Card>
+  
+  <Card title="Testability" icon="flask">
+    Business logic in providers is easy to unit test without UI dependencies.
+  </Card>
+</CardGroup>
+
+## Provider Setup
+
+Providers are registered at app startup in `main.dart`:
+
+```dart lib/main.dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'features/discount_calculator/providers/discount_provider.dart';
+import 'features/sales_price_calculator/providers/sales_price_provider.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => DiscountCalculatorProvider(prefs)
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SalesPriceProvider(prefs)
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
+}
+```
+
+<Tip>
+  `SharedPreferences` is initialized once at app startup and injected into providers. This ensures all providers share the same persistence layer.
+</Tip>
+
+## ChangeNotifier Pattern
+
+All providers extend `ChangeNotifier` to enable reactive updates:
+
+```dart
+class DiscountCalculatorProvider extends ChangeNotifier {
+  final SharedPreferences _prefs;
+
+  // Private state
+  double? _subtotal;
+  double? _finalPrice;
+  double? _savedAmount;
+  String? _errorMessage;
+
+  // Public getters
+  double? get subtotal => _subtotal;
+  double? get finalPrice => _finalPrice;
+  String? get errorMessage => _errorMessage;
+
+  DiscountCalculatorProvider(this._prefs) {
+    _loadFromPrefs();
+  }
+
+  void calculateDiscount({
+    required String originalPriceStr,
+    required String primaryDiscountStr,
+  }) {
+    // Perform calculations
+    _subtotal = /* calculated value */;
+    _finalPrice = /* calculated value */;
+    
+    // Notify listeners to rebuild
+    notifyListeners();
+  }
+}
+```
+
+### Key Components
+
+| Component | Purpose |
+|-----------|----------|
+| **Private State** | Internal state variables prefixed with `_` |
+| **Public Getters** | Read-only access to state for widgets |
+| **Methods** | Actions that modify state and call `notifyListeners()` |
+| **Constructor** | Receives `SharedPreferences` and loads persisted state |
+
+<Note>
+  Always call `notifyListeners()` after state changes to trigger UI updates. Widgets watching this provider will automatically rebuild.
+</Note>
+
+## State Persistence
+
+Numix persists user inputs and calculations using `SharedPreferences`:
+
+### Saving State
+
+```dart lib/features/discount_calculator/providers/discount_provider.dart
+void calculateDiscount({
+  required String originalPriceStr,
+  required String primaryDiscountStr,
+  String additionalDiscountStr = '',
+  String taxStr = '',
+}) {
+  // Persist inputs
+  _originalPriceInput = originalPriceStr;
+  _primaryDiscountInput = primaryDiscountStr;
+  _additionalDiscountInput = additionalDiscountStr;
+  _taxInput = taxStr;
+
+  _prefs.setString('disc_orig', originalPriceStr);
+  _prefs.setString('disc_pri', primaryDiscountStr);
+  _prefs.setString('disc_add', additionalDiscountStr);
+  _prefs.setString('disc_tax', taxStr);
+
+  _calculateInternal();
+}
+```
+
+### Loading State
+
+```dart lib/features/discount_calculator/providers/discount_provider.dart
+void _loadFromPrefs() {
+  _originalPriceInput = _prefs.getString('disc_orig') ?? '';
+  _primaryDiscountInput = _prefs.getString('disc_pri') ?? '';
+  _additionalDiscountInput = _prefs.getString('disc_add') ?? '';
+  _taxInput = _prefs.getString('disc_tax') ?? '';
+  
+  final typeIndex = _prefs.getInt('disc_type') ?? 0;
+  _discountType = typeIndex == 0 
+    ? DiscountType.percentage 
+    : DiscountType.fixedAmount;
+
+  // Restore calculations if inputs exist
+  if (_originalPriceInput.isNotEmpty && _primaryDiscountInput.isNotEmpty) {
+    _calculateInternal();
+  }
+}
+```
+
+### Clearing State
+
+```dart
+void clear() {
+  _originalPriceInput = '';
+  _primaryDiscountInput = '';
+  _additionalDiscountInput = '';
+  _taxInput = '';
+  
+  _prefs.remove('disc_orig');
+  _prefs.remove('disc_pri');
+  _prefs.remove('disc_add');
+  _prefs.remove('disc_tax');
+  
+  _clearResults();
+  _errorMessage = null;
+  notifyListeners();
+}
+```
+
+<Tip>
+  Persistence happens automatically. Users can close the app and return later to find their calculations exactly as they left them.
+</Tip>
+
+## Consuming Providers in Widgets
+
+### Using context.read()
+
+Use `context.read()` for one-time operations like button clicks:
+
+```dart
+void _calculateDiscount() {
+  context.read<DiscountCalculatorProvider>().calculateDiscount(
+    originalPriceStr: _originalPriceController.text,
+    primaryDiscountStr: _primaryDiscountController.text,
+  );
+}
+
+ElevatedButton(
+  onPressed: _calculateDiscount,
+  child: const Text('Calculate'),
+)
+```
+
+<Note>
+  `context.read()` does **not** cause rebuilds. Use it for triggering actions, not for displaying state.
+</Note>
+
+### Using context.watch()
+
+Use `context.watch()` to reactively display state:
+
+```dart
+@override
+Widget build(BuildContext context) {
+  final provider = context.watch<DiscountCalculatorProvider>();
+
+  return Column(
+    children: [
+      if (provider.errorMessage != null)
+        Text(
+          provider.errorMessage!,
+          style: TextStyle(color: Colors.red),
+        ),
+      
+      if (provider.finalPrice != null)
+        Text(
+          'Final Price: \$${provider.finalPrice!.toStringAsFixed(2)}',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+    ],
+  );
+}
+```
+
+<Note>
+  `context.watch()` **causes rebuilds** when state changes. The entire `build()` method runs again.
+</Note>
+
+### Using Consumer Widget
+
+For granular control, use `Consumer` to rebuild only specific widgets:
+
+```dart
+Consumer<DiscountCalculatorProvider>(
+  builder: (context, provider, child) {
+    return Text(
+      'Subtotal: \$${provider.subtotal?.toStringAsFixed(2) ?? '0.00'}',
+    );
+  },
+)
+```
+
+<Tip>
+  Use `Consumer` when you only want part of the widget tree to rebuild, not the entire screen.
+</Tip>
+
+## Real-World Example: Sales Price Calculator
+
+Let's examine the complete state management flow in the sales price calculator:
+
+### Provider Implementation
+
+```dart lib/features/sales_price_calculator/providers/sales_price_provider.dart
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+enum MarginType {
+  markup,
+  margin,
+}
+
+class SalesPriceProvider extends ChangeNotifier {
+  final SharedPreferences _prefs;
+
+  // Calculated results
+  double? _baseSalePrice; 
+  double? _finalPrice; 
+  double? _profitAmount; 
+  double? _taxAmount; 
+  String? _errorMessage;
+
+  // Configuration
+  MarginType _marginType = MarginType.markup;
+
+  // Persisted inputs
+  String _costInput = '';
+  String _profitPercentInput = '';
+  String _taxInput = '';
+
+  SalesPriceProvider(this._prefs) {
+    _loadFromPrefs();
+  }
+
+  // Public getters
+  double? get baseSalePrice => _baseSalePrice;
+  double? get finalPrice => _finalPrice;
+  double? get profitAmount => _profitAmount;
+  String? get errorMessage => _errorMessage;
+  MarginType get marginType => _marginType;
+
+  void setMarginType(MarginType type) {
+    _marginType = type;
+    _prefs.setInt('sales_margin_type', type == MarginType.markup ? 0 : 1);
+    notifyListeners();
+  }
+
+  void calculatePrice({
+    required String costStr, 
+    required String profitPercentStr, 
+    String taxStr = '0',
+  }) {
+    // Persist inputs
+    _costInput = costStr;
+    _profitPercentInput = profitPercentStr;
+    _taxInput = taxStr;
+
+    _prefs.setString('sales_cost', costStr);
+    _prefs.setString('sales_profit', profitPercentStr);
+    _prefs.setString('sales_tax', taxStr);
+
+    _calculateInternal();
+  }
+
+  void _calculateInternal() {
+    _errorMessage = null;
+
+    // Parse with safety
+    final cost = double.tryParse(_costInput);
+    final profitPercent = double.tryParse(_profitPercentInput);
+    final taxPercent = _taxInput.isEmpty ? 0.0 : double.tryParse(_taxInput);
+
+    // Validation
+    if (cost == null || profitPercent == null || taxPercent == null) {
+      _errorMessage = "Valores numéricos inválidos";
+      _clearResults();
+      notifyListeners();
+      return;
+    }
+
+    if (cost < 0 || profitPercent < 0 || taxPercent < 0) {
+      _errorMessage = "Los valores no pueden ser negativos";
+      _clearResults();
+      notifyListeners();
+      return;
+    }
+
+    // Calculate based on margin type
+    if (_marginType == MarginType.markup) {
+      _profitAmount = cost * (profitPercent / 100);
+      _baseSalePrice = cost + _profitAmount!;
+    } else {
+      if (profitPercent >= 100) {
+        _errorMessage = "El margen sobre venta debe ser menor a 100%";
+        _clearResults();
+        notifyListeners();
+        return;
+      }
+      _baseSalePrice = cost / (1 - (profitPercent / 100));
+      _profitAmount = _baseSalePrice! - cost;
+    }
+
+    _taxAmount = _baseSalePrice! * (taxPercent / 100);
+    _finalPrice = _baseSalePrice! + _taxAmount!;
+
+    notifyListeners();
+  }
+
+  void _clearResults() {
+    _baseSalePrice = null;
+    _finalPrice = null;
+    _profitAmount = null;
+    _taxAmount = null;
+  }
+}
+```
+
+### Key Patterns Demonstrated
+
+1. **Safe Parsing**: Uses `double.tryParse()` instead of `double.parse()` to prevent crashes
+2. **Validation**: Checks for null values and negative numbers before calculations
+3. **Error Handling**: Sets `_errorMessage` and clears results on validation failure
+4. **Persistence**: Saves all inputs to `SharedPreferences` automatically
+5. **Type Safety**: Uses enums (`MarginType`) for configuration options
+6. **Notifications**: Calls `notifyListeners()` after every state change
+
+## Mathematical Safety
+
+Numix enforces strict mathematical safety rules:
+
+### Always Use tryParse
+
+```dart
+// ✅ Correct - Safe parsing
+final price = double.tryParse(priceInput);
+if (price == null) {
+  _errorMessage = "Invalid number";
+  return;
+}
+
+// ❌ Wrong - Can crash
+final price = double.parse(priceInput);
+```
+
+### Validate Before Calculating
+
+```dart
+if (origPrice < 0 || discount < 0) {
+  _errorMessage = "Values cannot be negative";
+  _clearResults();
+  notifyListeners();
+  return;
+}
+
+if (_discountType == DiscountType.percentage && discount > 100) {
+  _errorMessage = "Discount cannot exceed 100%";
+  _clearResults();
+  notifyListeners();
+  return;
+}
+```
+
+### Clear Results on Error
+
+```dart
+void _clearResults() {
+  _subtotal = null;
+  _finalPrice = null;
+  _savedAmount = null;
+  _taxAmount = null;
+}
+```
+
+<Note>
+  All validation errors set `_errorMessage`, clear results, and call `notifyListeners()` to update the UI with the error state.
+</Note>
+
+## Performance Best Practices
+
+### 1. Use read() for Events
+
+```dart
+// ✅ Correct - No rebuilds
+void _onButtonPressed() {
+  context.read<MyProvider>().doSomething();
+}
+
+// ❌ Wrong - Unnecessary rebuilds
+void _onButtonPressed() {
+  context.watch<MyProvider>().doSomething();
+}
+```
+
+### 2. Use watch() Only in build()
+
+```dart
+// ✅ Correct - Reactive UI
+@override
+Widget build(BuildContext context) {
+  final provider = context.watch<MyProvider>();
+  return Text(provider.value);
+}
+
+// ❌ Wrong - watch() outside build()
+void initState() {
+  super.initState();
+  final provider = context.watch<MyProvider>(); // Don't do this!
+}
+```
+
+### 3. Use Consumer for Partial Updates
+
+```dart
+// ✅ Correct - Only Text rebuilds
+Column(
+  children: [
+    const ExpensiveWidget(), // Doesn't rebuild
+    Consumer<MyProvider>(
+      builder: (context, provider, child) {
+        return Text(provider.value); // Only this rebuilds
+      },
+    ),
+  ],
+)
+```
+
+## Testing Providers
+
+Providers are easy to test without UI dependencies:
+
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+void main() {
+  test('calculates discount correctly', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final provider = DiscountCalculatorProvider(prefs);
+
+    provider.calculateDiscount(
+      originalPriceStr: '100',
+      primaryDiscountStr: '20',
+    );
+
+    expect(provider.subtotal, 80.0);
+    expect(provider.savedAmount, 20.0);
+    expect(provider.errorMessage, isNull);
+  });
+
+  test('validates negative inputs', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final provider = DiscountCalculatorProvider(prefs);
+
+    provider.calculateDiscount(
+      originalPriceStr: '-100',
+      primaryDiscountStr: '20',
+    );
+
+    expect(provider.errorMessage, isNotNull);
+    expect(provider.subtotal, isNull);
+  });
+}
+```
+
+<Tip>
+  Numix requires 100% test coverage for all mathematical operations and provider logic.
+</Tip>
+
+## Common Patterns
+
+### Pattern 1: Input Restoration
+
+Restore user inputs when returning to a screen:
+
+```dart
+@override
+void initState() {
+  super.initState();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final provider = context.read<DiscountCalculatorProvider>();
+    if (provider.originalPriceInput.isNotEmpty) {
+      _originalPriceController.text = provider.originalPriceInput;
+      _discountController.text = provider.primaryDiscountInput;
+    }
+  });
+}
+```
+
+### Pattern 2: Conditional Display
+
+Show results or errors based on provider state:
+
+```dart
+final provider = context.watch<DiscountCalculatorProvider>();
+
+if (provider.errorMessage != null) {
+  return ErrorWidget(message: provider.errorMessage!);
+}
+
+if (provider.finalPrice != null) {
+  return ResultsWidget(price: provider.finalPrice!);
+}
+
+return const EmptyStateWidget();
+```
+
+### Pattern 3: Type Toggle
+
+Allow users to switch between calculation modes:
+
+```dart
+SegmentedButton<DiscountType>(
+  selected: {context.watch<DiscountCalculatorProvider>().discountType},
+  onSelectionChanged: (Set<DiscountType> types) {
+    context.read<DiscountCalculatorProvider>()
+      .setDiscountType(types.first);
+  },
+  segments: const [
+    ButtonSegment(value: DiscountType.percentage, label: Text('Percentage')),
+    ButtonSegment(value: DiscountType.fixedAmount, label: Text('Fixed')),
+  ],
+)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Feature-First Architecture" icon="sitemap" href="/architecture/feature-first">
+    Learn how features are structured and isolated
+  </Card>
+  
+  <Card title="Architecture Overview" icon="diagram-project" href="/architecture/overview">
+    Review the high-level architecture principles
+  </Card>
+</CardGroup>

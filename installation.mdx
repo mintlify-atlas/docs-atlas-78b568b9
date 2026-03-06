@@ -1,0 +1,304 @@
+---
+title: Installation
+description: Set up your development environment and install Numix
+---
+
+## Prerequisites
+
+Before installing Numix, ensure you have the following tools installed on your system:
+
+### Flutter SDK
+
+Numix requires Flutter SDK version **3.6.0** or higher.
+
+<Steps>
+  <Step title="Check Flutter Installation">
+    Verify if Flutter is already installed on your system:
+    
+    ```bash
+    flutter --version
+    ```
+    
+    If Flutter is installed, you should see output similar to:
+    
+    ```plaintext
+    Flutter 3.6.0 • channel stable
+    Framework • revision abc123def456
+    Engine • revision 123456789abc
+    Tools • Dart 3.6.0 • DevTools 2.28.0
+    ```
+  </Step>
+  
+  <Step title="Install Flutter (if needed)">
+    If Flutter is not installed or your version is below 3.6.0, follow the official installation guide:
+    
+    <CardGroup cols={3}>
+      <Card title="macOS" icon="apple" href="https://docs.flutter.dev/get-started/install/macos">
+        Install Flutter on macOS
+      </Card>
+      <Card title="Windows" icon="windows" href="https://docs.flutter.dev/get-started/install/windows">
+        Install Flutter on Windows
+      </Card>
+      <Card title="Linux" icon="linux" href="https://docs.flutter.dev/get-started/install/linux">
+        Install Flutter on Linux
+      </Card>
+    </CardGroup>
+  </Step>
+  
+  <Step title="Run Flutter Doctor">
+    After installing Flutter, run the diagnostic tool to verify your setup:
+    
+    ```bash
+    flutter doctor
+    ```
+    
+    This command checks your environment and displays a report of the status of your Flutter installation. Address any issues reported by `flutter doctor` before proceeding.
+  </Step>
+</Steps>
+
+<Note>
+  You'll need either Android Studio (for Android development) or Xcode (for iOS development) installed and configured. Run `flutter doctor` to verify all required dependencies.
+</Note>
+
+## System Requirements
+
+<Tabs>
+  <Tab title="Android">
+    - **Android SDK**: API Level 21 (Android 5.0) or higher
+    - **Android Studio**: Latest version recommended
+    - **Java Development Kit (JDK)**: Version 11 or higher
+  </Tab>
+  <Tab title="iOS">
+    - **macOS**: Required for iOS development
+    - **Xcode**: Latest version from the Mac App Store
+    - **CocoaPods**: Installed via Ruby gems
+    - **iOS Deployment Target**: iOS 12.0 or higher
+  </Tab>
+</Tabs>
+
+## Installing Numix
+
+Once your Flutter environment is set up, follow these steps to install Numix:
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the Numix repository from your source control:
+    
+    ```bash
+    git clone <repository-url> numix
+    cd numix
+    ```
+    
+    Replace `<repository-url>` with your actual repository URL.
+  </Step>
+  
+  <Step title="Install Dependencies">
+    Install all required Flutter packages using pub:
+    
+    ```bash
+    flutter pub get
+    ```
+    
+    This command will download and install all dependencies specified in `pubspec.yaml`:
+    
+    - **provider** (^6.1.5): State management
+    - **math_expressions** (3.0.0): Precise mathematical calculations
+    - **shared_preferences** (2.3.2): Local data persistence
+    - **cupertino_icons** (^1.0.8): iOS-style icons
+  </Step>
+  
+  <Step title="Verify Installation">
+    Verify that all dependencies are correctly installed:
+    
+    ```bash
+    flutter pub outdated
+    ```
+    
+    This shows which packages are up to date and which have newer versions available.
+  </Step>
+</Steps>
+
+## Project Dependencies
+
+Here's a detailed breakdown of Numix's dependencies and their purposes:
+
+### Core Dependencies
+
+```yaml pubspec.yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  provider: ^6.1.5+1
+  
+  # Mathematical Precision Engine
+  math_expressions: 3.0.0
+  
+  # Local Data Persistence
+  shared_preferences: 2.3.2
+  
+  # iOS Style Icons
+  cupertino_icons: ^1.0.8
+```
+
+<AccordionGroup>
+  <Accordion title="provider - State Management">
+    The `provider` package is Numix's state management solution. It enables:
+    - Reactive UI updates when data changes
+    - Dependency injection for providers
+    - Efficient widget rebuilding (only affected widgets update)
+    - Clean separation between UI and business logic
+    
+    Numix uses `ChangeNotifierProvider` to expose calculation providers throughout the widget tree.
+  </Accordion>
+  
+  <Accordion title="math_expressions - Calculation Engine">
+    The `math_expressions` library ensures mathematical precision by:
+    - Preventing floating-point arithmetic errors
+    - Providing safe expression evaluation
+    - Supporting complex mathematical operations
+    - Offering predictable, accurate results
+    
+    This is critical for commercial applications where precision matters.
+  </Accordion>
+  
+  <Accordion title="shared_preferences - Data Persistence">
+    The `shared_preferences` package provides:
+    - Simple key-value storage
+    - Persistent data across app restarts
+    - Quick read/write operations
+    - Cross-platform compatibility
+    
+    Numix uses this to save your calculator inputs and preferences automatically.
+  </Accordion>
+</AccordionGroup>
+
+## Development Dependencies
+
+For testing and development, Numix includes:
+
+```yaml pubspec.yaml
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  
+  flutter_lints: ^5.0.0
+```
+
+<Warning>
+  Numix enforces 100% unit test coverage for all mathematical calculation logic. Run `flutter test` to execute the test suite.
+</Warning>
+
+## Verify Your Installation
+
+After completing the installation steps, verify everything is working:
+
+<Steps>
+  <Step title="Check Connected Devices">
+    List available devices (emulators or physical devices):
+    
+    ```bash
+    flutter devices
+    ```
+    
+    You should see at least one device available.
+  </Step>
+  
+  <Step title="Analyze the Project">
+    Run static analysis to ensure code quality:
+    
+    ```bash
+    flutter analyze
+    ```
+    
+    This should complete with no issues.
+  </Step>
+  
+  <Step title="Run Tests">
+    Execute the test suite:
+    
+    ```bash
+    flutter test
+    ```
+    
+    All tests should pass successfully.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Flutter command not found">
+    If you receive a "command not found" error:
+    
+    1. Ensure Flutter is added to your PATH environment variable
+    2. Restart your terminal/command prompt
+    3. Run `flutter doctor` to verify the installation
+    
+    **macOS/Linux**: Add to `.zshrc` or `.bashrc`:
+    ```bash
+    export PATH="$PATH:[PATH_TO_FLUTTER_GIT_DIRECTORY]/flutter/bin"
+    ```
+    
+    **Windows**: Add Flutter bin directory to System Environment Variables PATH.
+  </Accordion>
+  
+  <Accordion title="Dependency resolution errors">
+    If you encounter dependency resolution errors:
+    
+    1. Delete the `pubspec.lock` file
+    2. Delete the `.dart_tool` directory
+    3. Run `flutter clean`
+    4. Run `flutter pub get` again
+    
+    ```bash
+    rm pubspec.lock
+    rm -rf .dart_tool
+    flutter clean
+    flutter pub get
+    ```
+  </Accordion>
+  
+  <Accordion title="Gradle build errors (Android)">
+    If you encounter Gradle build errors:
+    
+    1. Ensure you have the correct JDK version (11 or higher)
+    2. Clear Gradle cache:
+       ```bash
+       cd android
+       ./gradlew clean
+       cd ..
+       flutter clean
+       ```
+    3. Rebuild the project:
+       ```bash
+       flutter build apk --debug
+       ```
+  </Accordion>
+  
+  <Accordion title="CocoaPods errors (iOS)">
+    If you encounter CocoaPods errors on iOS:
+    
+    1. Update CocoaPods:
+       ```bash
+       sudo gem install cocoapods
+       ```
+    2. Clean and reinstall pods:
+       ```bash
+       cd ios
+       rm -rf Pods Podfile.lock
+       pod install
+       cd ..
+       flutter clean
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+With Numix successfully installed, you're ready to run the application. Continue to the [Quickstart Guide](/quickstart) to launch Numix and explore its features.
+
+<Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+  Learn how to run Numix and start using the calculators
+</Card>

@@ -1,0 +1,270 @@
+---
+title: 'SalesPriceProvider'
+description: 'State management provider for sales price calculations with markup and margin support'
+icon: 'dollar-sign'
+---
+
+The `SalesPriceProvider` manages the state and business logic for calculating sales prices based on cost and profit margins. It supports both markup (profit on cost) and margin (profit on sales) calculations.
+
+## Overview
+
+This provider handles two types of profit calculations:
+- **Markup**: Calculate profit as a percentage of cost (e.g., 50% markup on $100 cost = $150 selling price)
+- **Margin**: Calculate profit as a percentage of selling price (e.g., 50% margin means cost is 50% of selling price)
+
+All inputs are persisted across app sessions using `SharedPreferences`.
+
+## Enums
+
+### MarginType
+
+Defines the method of profit calculation.
+
+```dart
+enum MarginType {
+  markup,
+  margin,
+}
+```
+
+<ParamField path="markup" type="MarginType">
+  Calculate profit as a percentage of cost (Profit / Cost × 100)
+</ParamField>
+
+<ParamField path="margin" type="MarginType">
+  Calculate profit as a percentage of sales price (Profit / Sales Price × 100)
+</ParamField>
+
+## Constructor
+
+```dart
+SalesPriceProvider(SharedPreferences prefs)
+```
+
+<ParamField path="prefs" type="SharedPreferences" required>
+  The SharedPreferences instance used for persisting calculator state
+</ParamField>
+
+## Getters
+
+### Calculation Results
+
+<ResponseField name="baseSalePrice" type="double?">
+  The selling price before tax (cost + profit)
+</ResponseField>
+
+<ResponseField name="finalPrice" type="double?">
+  The final selling price including tax
+</ResponseField>
+
+<ResponseField name="profitAmount" type="double?">
+  The dollar amount of profit on this sale
+</ResponseField>
+
+<ResponseField name="taxAmount" type="double?">
+  The calculated tax amount based on the base sale price
+</ResponseField>
+
+<ResponseField name="errorMessage" type="String?">
+  Error message if validation fails, null otherwise
+</ResponseField>
+
+### Configuration
+
+<ResponseField name="marginType" type="MarginType">
+  The current profit calculation method (markup or margin)
+</ResponseField>
+
+### Input State
+
+<ResponseField name="costInput" type="String">
+  The persisted cost input string
+</ResponseField>
+
+<ResponseField name="profitPercentInput" type="String">
+  The persisted profit percentage input string
+</ResponseField>
+
+<ResponseField name="taxInput" type="String">
+  The persisted tax percentage input string
+</ResponseField>
+
+## Methods
+
+### calculatePrice
+
+Calculates the sales price based on cost and profit percentage.
+
+```dart
+void calculatePrice({
+  required String costStr,
+  required String profitPercentStr,
+  String taxStr = '0',
+})
+```
+
+<ParamField path="costStr" type="String" required>
+  The base cost of the product
+</ParamField>
+
+<ParamField path="profitPercentStr" type="String" required>
+  The desired profit percentage (interpreted based on marginType)
+</ParamField>
+
+<ParamField path="taxStr" type="String" default="0">
+  Optional tax percentage to apply to the base sale price
+</ParamField>
+
+#### Calculation Formulas
+
+**For Markup (Profit on Cost):**
+```
+profitAmount = cost × (profitPercent / 100)
+baseSalePrice = cost + profitAmount
+```
+
+Example: $100 cost with 50% markup:
+- Profit = $100 × 0.50 = $50
+- Sale Price = $100 + $50 = $150
+
+**For Margin (Profit on Sales):**
+```
+baseSalePrice = cost / (1 - (profitPercent / 100))
+profitAmount = baseSalePrice - cost
+```
+
+Example: $100 cost with 50% margin:
+- Sale Price = $100 / (1 - 0.50) = $200
+- Profit = $200 - $100 = $100
+
+**Tax Calculation:**
+```
+taxAmount = baseSalePrice × (taxPercent / 100)
+finalPrice = baseSalePrice + taxAmount
+```
+
+#### Validation
+
+The method validates:
+- All numeric inputs are valid numbers
+- No negative values
+- For margin calculation: profit percentage must be less than 100%
+
+If validation fails, `errorMessage` is set and results are cleared.
+
+### setMarginType
+
+Changes the margin calculation type and persists the selection.
+
+```dart
+void setMarginType(MarginType type)
+```
+
+<ParamField path="type" type="MarginType" required>
+  The new margin type to use for calculations
+</ParamField>
+
+This method automatically persists the selection to SharedPreferences and notifies listeners.
+
+### clear
+
+Resets all inputs and calculation results.
+
+```dart
+void clear()
+```
+
+This method:
+- Clears all input strings
+- Removes persisted values from SharedPreferences
+- Clears all calculation results
+- Clears any error messages
+- Notifies listeners of the state change
+
+## Usage Example
+
+```dart
+import 'package:provider/provider.dart';
+import 'package:numix/features/sales_price_calculator/providers/sales_price_provider.dart';
+
+// In your widget
+final provider = context.read<SalesPriceProvider>();
+
+// Calculate with markup
+provider.setMarginType(MarginType.markup);
+provider.calculatePrice(
+  costStr: '100.00',
+  profitPercentStr: '50',  // 50% markup
+  taxStr: '8.5',           // 8.5% tax
+);
+
+// Access results
+if (provider.errorMessage != null) {
+  print('Error: ${provider.errorMessage}');
+} else {
+  print('Base Sale Price: \$${provider.baseSalePrice}');
+  print('Profit Amount: \$${provider.profitAmount}');
+  print('Tax: \$${provider.taxAmount}');
+  print('Final Price: \$${provider.finalPrice}');
+}
+
+// Switch to margin calculation
+provider.setMarginType(MarginType.margin);
+provider.calculatePrice(
+  costStr: '100.00',
+  profitPercentStr: '50',  // 50% margin on sales
+  taxStr: '8.5',
+);
+
+// Clear all
+provider.clear();
+```
+
+## Markup vs Margin Comparison
+
+<Tip>
+Understanding the difference between markup and margin is critical for pricing:
+
+**Markup**: Profit as a percentage of cost
+- Formula: `(Profit / Cost) × 100`
+- Example: $100 cost, $50 profit = 50% markup
+- Common in retail and wholesale
+
+**Margin**: Profit as a percentage of selling price
+- Formula: `(Profit / Sales Price) × 100`
+- Example: $150 sale, $50 profit = 33.3% margin
+- Common in financial analysis
+
+Note: A 50% markup equals a 33.3% margin, while a 50% margin equals a 100% markup.
+</Tip>
+
+## UI Integration
+
+Use with `Consumer` widgets for reactive updates:
+
+```dart
+Consumer<SalesPriceProvider>(
+  builder: (context, provider, child) {
+    if (provider.finalPrice != null) {
+      return Column(
+        children: [
+          Text('Sale Price: \$${provider.baseSalePrice!.toStringAsFixed(2)}'),
+          Text('Profit: \$${provider.profitAmount!.toStringAsFixed(2)}'),
+          Text('Final (with tax): \$${provider.finalPrice!.toStringAsFixed(2)}'),
+        ],
+      );
+    }
+    return const SizedBox.shrink();
+  },
+)
+```
+
+## Persistence
+
+All user inputs are automatically persisted using the following SharedPreferences keys:
+- `sales_cost` - Product cost
+- `sales_profit` - Profit percentage
+- `sales_tax` - Tax percentage
+- `sales_margin_type` - Margin type (0 = markup, 1 = margin)
+
+The provider automatically restores these values when initialized.

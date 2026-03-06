@@ -1,0 +1,221 @@
+---
+title: "Discount Calculator"
+description: "Calculate discounts with percentage or fixed amount modes, including tax calculations"
+---
+
+## Overview
+
+The Discount Calculator is one of Numix's core features, designed to help businesses accurately calculate discounted prices with support for multiple discount types, cascading discounts, and tax calculations.
+
+<CardGroup cols={2}>
+  <Card title="Percentage Discounts" icon="percent">
+    Calculate discounts as a percentage of the original price
+  </Card>
+  <Card title="Fixed Amount" icon="dollar-sign">
+    Apply discounts as fixed monetary amounts
+  </Card>
+  <Card title="Multiple Discounts" icon="layers">
+    Apply primary and additional discounts sequentially
+  </Card>
+  <Card title="Tax Calculation" icon="receipt">
+    Calculate taxes on the discounted subtotal
+  </Card>
+</CardGroup>
+
+## Discount Modes
+
+The calculator supports two distinct discount calculation modes:
+
+### Percentage Mode
+
+In percentage mode, discounts are applied as percentages of the current price. This mode uses **cascading discount logic**, where each subsequent discount is applied to the already-discounted price.
+
+```dart discount_provider.dart lines
+if (_discountType == DiscountType.percentage) {
+  if (primaryDiscount > 100 || additionalDiscount > 100) {
+    _errorMessage = "Los porcentajes de descuento no pueden exceder 100%";
+    return;
+  }
+
+  // Apply primary discount
+  double saved1 = currentPrice * (primaryDiscount / 100);
+  currentPrice -= saved1;
+  totalSaved += saved1;
+
+  // Apply additional discount to already-discounted price
+  if (additionalDiscount > 0) {
+    double saved2 = currentPrice * (additionalDiscount / 100);
+    currentPrice -= saved2;
+    totalSaved += saved2;
+  }
+}
+```
+
+<Note>
+**Cascading Discount Example**: A $100 item with 20% + 10% discounts:
+- After first discount: $100 - ($100 × 0.20) = $80
+- After second discount: $80 - ($80 × 0.10) = $72
+- Total savings: $28 (not $30!)
+</Note>
+
+### Fixed Amount Mode
+
+In fixed amount mode, discounts are applied as absolute monetary values. Multiple fixed discounts are simply added together.
+
+```dart discount_provider.dart lines
+else {
+  double totalFixedDiscount = primaryDiscount + additionalDiscount;
+  if (totalFixedDiscount > origPrice) {
+    _errorMessage = "El descuento no puede ser mayor al precio original";
+    return;
+  }
+  totalSaved = totalFixedDiscount;
+  currentPrice = origPrice - totalFixedDiscount;
+}
+```
+
+## Calculation Flow
+
+The calculator follows a precise sequence:
+
+<Steps>
+  <Step title="Parse and Validate Input">
+    All inputs are safely parsed using `double.tryParse()` to prevent crashes from invalid input.
+    
+    ```dart discount_provider.dart lines
+    final origPrice = double.tryParse(_originalPriceInput);
+    final primaryDiscount = double.tryParse(_primaryDiscountInput);
+    final additionalDiscount = _additionalDiscountInput.isEmpty ? 0.0 : double.tryParse(_additionalDiscountInput);
+    final taxPercent = _taxInput.isEmpty ? 0.0 : double.tryParse(_taxInput);
+    
+    if (origPrice == null || primaryDiscount == null || additionalDiscount == null || taxPercent == null) {
+      _errorMessage = "Valores numéricos inválidos";
+      return;
+    }
+    ```
+  </Step>
+
+  <Step title="Apply Discount Logic">
+    Discounts are applied according to the selected mode (percentage or fixed amount), with proper validation at each step.
+  </Step>
+
+  <Step title="Calculate Tax">
+    Tax is calculated on the **discounted subtotal**, not the original price:
+    
+    ```dart discount_provider.dart lines
+    _subtotal = currentPrice;
+    _taxAmount = _subtotal! * (taxPercent / 100);
+    _finalPrice = _subtotal! + _taxAmount!;
+    ```
+  </Step>
+
+  <Step title="Update UI">
+    Results are exposed through getters and the UI is notified via `notifyListeners()`.
+  </Step>
+</Steps>
+
+## Validation Rules
+
+The calculator enforces strict business rules to prevent invalid calculations:
+
+<Accordion title="Negative Value Protection">
+  All values (price, discounts, tax) must be non-negative.
+  
+  ```dart
+  if (origPrice < 0 || primaryDiscount < 0 || additionalDiscount < 0 || taxPercent < 0) {
+    _errorMessage = "Los valores no pueden ser negativos";
+    return;
+  }
+  ```
+</Accordion>
+
+<Accordion title="Percentage Range Validation">
+  In percentage mode, discounts cannot exceed 100%.
+  
+  ```dart
+  if (primaryDiscount > 100 || additionalDiscount > 100) {
+    _errorMessage = "Los porcentajes de descuento no pueden exceder 100%";
+    return;
+  }
+  ```
+</Accordion>
+
+<Accordion title="Fixed Discount Ceiling">
+  In fixed amount mode, total discounts cannot exceed the original price.
+  
+  ```dart
+  if (totalFixedDiscount > origPrice) {
+    _errorMessage = "El descuento no puede ser mayor al precio original";
+    return;
+  }
+  ```
+</Accordion>
+
+## Input Fields
+
+The calculator accepts four input values:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| Original Price | Number | Yes | The starting price before any discounts |
+| Primary Discount | Number | Yes | The first discount to apply (% or fixed amount) |
+| Additional Discount | Number | No | Optional second discount (% or fixed amount) |
+| Tax Percentage | Number | No | Tax rate to apply to the discounted price |
+
+## Output Values
+
+After calculation, the following values are available:
+
+- **Subtotal**: Price after all discounts, before tax
+- **Saved Amount**: Total monetary value saved from discounts
+- **Tax Amount**: Tax calculated on the subtotal
+- **Final Price**: Subtotal plus tax (the amount customer pays)
+
+## State Persistence
+
+All inputs are automatically saved to device storage using SharedPreferences:
+
+```dart discount_provider.dart lines
+_prefs.setString('disc_orig', originalPriceStr);
+_prefs.setString('disc_pri', primaryDiscountStr);
+_prefs.setString('disc_add', additionalDiscountStr);
+_prefs.setString('disc_tax', taxStr);
+_prefs.setInt('disc_type', type == DiscountType.percentage ? 0 : 1);
+```
+
+When the app restarts, the calculator automatically restores the last used values and recalculates the results.
+
+<Tip>
+For implementation details and API documentation, see the [Discount Provider API Reference](/api/discount-provider).
+</Tip>
+
+## Usage Example
+
+**Scenario**: A store offers 20% off a $100 item, plus an additional 10% off for loyalty members, with 8% sales tax.
+
+<Steps>
+  <Step title="Enter Values">
+    - Original Price: `100`
+    - Primary Discount: `20` (percentage mode)
+    - Additional Discount: `10`
+    - Tax: `8`
+  </Step>
+
+  <Step title="Results">
+    - Subtotal: `$72.00` ($100 → $80 → $72)
+    - Saved: `$28.00`
+    - Tax: `$5.76` (8% of $72)
+    - Final Price: `$77.76`
+  </Step>
+</Steps>
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="Sales Price Calculator" icon="dollar-sign" href="/features/sales-price-calculator">
+    Calculate optimal pricing with markup or margin
+  </Card>
+  <Card title="Mathematical Precision" icon="calculator" href="/guides/mathematical-precision">
+    Learn how Numix ensures calculation accuracy
+  </Card>
+</CardGroup>

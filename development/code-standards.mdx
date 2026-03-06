@@ -1,0 +1,651 @@
+---
+title: Code Standards
+description: Coding standards and best practices for Numix development
+---
+
+Numix enforces strict coding standards to ensure maintainability, performance, and mathematical accuracy. These standards are enforced through the AI ecosystem and code reviews.
+
+## Architectural Standards
+
+### Feature-First Architecture
+
+Numix follows a **Domain-Driven Feature-First** architecture pattern, which isolates each feature into its own self-contained module.
+
+#### Directory Structure Requirements
+
+```
+lib/
+├── core/                         # Shared utilities only
+│   ├── theme/
+│   │   └── app_theme.dart
+│   ├── utils/
+│   │   └── formatters.dart
+│   └── constants/
+│       └── app_constants.dart
+├── features/                     # Feature modules
+│   ├── discount_calculator/
+│   │   ├── screens/              # UI screens
+│   │   ├── widgets/              # Feature-specific widgets
+│   │   ├── providers/            # State management
+│   │   ├── models/               # Data models
+│   │   └── services/             # Business logic (optional)
+│   ├── sales_price_calculator/
+│   └── product_inventory/
+```
+
+<Warning>
+  **Critical Rule**: `lib/core/` must NEVER depend on `lib/features/`. Dependencies flow in one direction only: features can use core, but core cannot use features.
+</Warning>
+
+#### Feature Isolation Rules
+
+1. Each feature must be completely self-contained
+2. No cross-importing UI components between features
+3. Shared widgets must be promoted to `lib/core/widgets/`
+4. Each feature manages its own state, models, and business logic
+
+**Example Violation**:
+```dart
+// ❌ FORBIDDEN: Importing from another feature
+import '../discount_calculator/widgets/percentage_input.dart';
+
+// ✅ CORRECT: Use shared core widget
+import '../../core/widgets/percentage_input.dart';
+```
+
+### Naming Conventions
+
+Strict naming conventions ensure consistency across the codebase.
+
+| Type | Convention | Example |
+|------|------------|----------|
+| Classes | `UpperCamelCase` | `SalesPriceProvider` |
+| Files/Folders | `snake_case` | `sales_price_provider.dart` |
+| Variables/Methods | `lowerCamelCase` | `calculateFinalPrice()` |
+| Private Members | Prefix with `_` | `_internalState` |
+| Constants | `lowerCamelCase` | `maxDiscountPercent` |
+| Enums | `UpperCamelCase` | `CalculationType` |
+| Enum Values | `lowerCamelCase` | `grossMargin` |
+
+**File Naming Examples**:
+```
+lib/features/discount_calculator/
+├── screens/
+│   └── discount_calculator_screen.dart
+├── providers/
+│   └── discount_calculator_provider.dart
+└── widgets/
+    ├── discount_input_card.dart
+    └── result_display_widget.dart
+```
+
+## State Management Standards
+
+### Provider Pattern Requirements
+
+Numix uses the `provider` package with strict performance optimization rules.
+
+#### Widget Rebuild Optimization
+
+<Warning>
+  **NEVER** use `context.watch()` or `Provider.of(context)` at the root `build` method of a large screen. This causes the entire screen to rebuild on every state change.
+</Warning>
+
+**Bad Example (Entire Screen Rebuilds)**:
+```dart
+class DiscountCalculatorScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // ❌ BAD: Entire screen rebuilds on any state change
+    final provider = context.watch<DiscountCalculatorProvider>();
+    
+    return Scaffold(
+      appBar: AppBar(title: Text('Discount Calculator')),
+      body: Column(
+        children: [
+          InputCard(),
+          ResultCard(),
+          HistoryList(),
+        ],
+      ),
+    );
+  }
+}
+```
+
+**Good Example (Granular Rebuilds)**:
+```dart
+class DiscountCalculatorScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Discount Calculator')),
+      body: Column(
+        children: [
+          InputCard(),
+          // ✅ GOOD: Only ResultCard rebuilds when result changes
+          Consumer<DiscountCalculatorProvider>(
+            builder: (context, provider, child) {
+              return ResultCard(result: provider.finalPrice);
+            },
+          ),
+          HistoryList(),
+        ],
+      ),
+    );
+  }
+}
+```
+
+#### Event Dispatching Pattern
+
+Use `context.read<T>()` strictly for dispatching events (buttons, callbacks).
+
+```dart
+// ✅ CORRECT: Event dispatching
+ElevatedButton(
+  onPressed: () {
+    context.read<DiscountCalculatorProvider>().calculateDiscount(
+      originalPrice: _priceController.text,
+      discountPercent: _discountController.text,
+    );
+  },
+  child: Text('Calculate'),
+)
+
+// ❌ FORBIDDEN: Using watch() for events
+onPressed: () {
+  context.watch<DiscountCalculatorProvider>().calculateDiscount(...); // NO!
+}
+```
+
+#### No setState for Business Logic
+
+**Rule**: Business logic, math variables, and view state must be managed inside `ChangeNotifier`. Avoid `setState` in `StatefulWidget` unless dealing with strictly UI-only ephemeral state (like animation controllers).
+
+```dart
+// ❌ BAD: Logic in StatefulWidget
+class _MyScreenState extends State<MyScreen> {
+  double _result = 0.0;
+  
+  void _calculate() {
+    setState(() {
+      _result = double.parse(_input) * 1.15; // Business logic in UI!
+    });
+  }
+}
+
+// ✅ GOOD: Logic in Provider
+class MyProvider extends ChangeNotifier {
+  double _result = 0.0;
+  double get result => _result;
+  
+  void calculate(String input) {
+    final value = double.tryParse(input);
+    if (value != null) {
+      _result = value * 1.15;
+      notifyListeners();
+    }
+  }
+}
+```
+
+### State Persistence Requirements
+
+**Rule**: User inputs (text fields, toggle switches, dropdown selections) must be immediately saved to `SharedPreferences` within the Provider.
+
+```dart
+class SalesPriceProvider extends ChangeNotifier {
+  final SharedPreferences _prefs;
+  
+  String _costInput = '';
+  String get costInput => _costInput;
+  
+  SalesPriceProvider(this._prefs) {
+    _loadPersistedState();
+  }
+  
+  void _loadPersistedState() {
+    _costInput = _prefs.getString('costInput') ?? '';
+    notifyListeners();
+  }
+  
+  void setCostInput(String value) {
+    _costInput = value;
+    _prefs.setString('costInput', value); // ✅ Persist immediately
+    notifyListeners();
+  }
+}
+```
+
+**Screen Restoration Example**:
+```dart
+class MyScreen extends StatefulWidget {
+  @override
+  _MyScreenState createState() => _MyScreenState();
+}
+
+class _MyScreenState extends State<MyScreen> {
+  late TextEditingController _controller;
+  
+  @override
+  void initState() {
+    super.initState();
+    final provider = context.read<SalesPriceProvider>();
+    _controller = TextEditingController(text: provider.costInput);
+  }
+}
+```
+
+## Mathematical Precision Standards
+
+### Safe Number Parsing
+
+**Rule**: ALWAYS use `double.tryParse()` when reading user inputs. NEVER use `double.parse()` directly.
+
+```dart
+// ❌ FORBIDDEN: Can crash with FormatException
+double cost = double.parse(userInput);
+
+// ✅ REQUIRED: Graceful error handling
+double? cost = double.tryParse(userInput);
+if (cost == null) {
+  _errorMessage = 'Please enter a valid number';
+  notifyListeners();
+  return;
+}
+```
+
+### Floating-Point Display Formatting
+
+**Rule**: Standard `double` arithmetic can yield imprecise results (e.g., `0.1 + 0.2 = 0.30000000000000004`). Always format before displaying to users.
+
+```dart
+// Raw calculation
+double result = 0.1 + 0.2; // 0.30000000000000004
+
+// ✅ Display formatted
+String displayValue = result.toStringAsFixed(2); // "0.30"
+
+// Alternative: Using NumberFormat
+import 'package:intl/intl.dart';
+final formatter = NumberFormat('#,##0.00');
+String displayValue = formatter.format(result);
+```
+
+### Mathematical Formulas
+
+Numix implements specific business formulas with precision:
+
+#### Markup Formula
+
+**Formula**: `Cost + (Cost × Percentage / 100)`
+
+```dart
+double calculateMarkupPrice(double cost, double markupPercent) {
+  return cost + (cost * markupPercent / 100);
+}
+
+// Example: $100 cost with 20% markup = $120
+final price = calculateMarkupPrice(100, 20); // 120.0
+```
+
+#### Gross Margin Formula
+
+**Formula**: `Cost / (1 - (Percentage / 100))`
+
+<Note>
+  Gross margin differs from markup. It calculates the selling price needed to achieve a desired profit margin percentage based on the selling price, not the cost.
+</Note>
+
+```dart
+double calculateGrossMarginPrice(double cost, double marginPercent) {
+  // Prevent division by zero or invalid margins
+  if (marginPercent >= 100 || marginPercent < 0) {
+    throw ArgumentError('Margin must be between 0 and 100');
+  }
+  
+  return cost / (1 - (marginPercent / 100));
+}
+
+// Example: $100 cost with 20% gross margin = $125
+final price = calculateGrossMarginPrice(100, 20); // 125.0
+```
+
+#### Cascading Discounts
+
+**Rule**: Apply percentages sequentially to the current price, NOT additively to the original price.
+
+```dart
+double applyCascadingDiscounts(double originalPrice, List<double> discounts) {
+  double currentPrice = originalPrice;
+  
+  for (final discount in discounts) {
+    // Apply each discount to the current price
+    currentPrice = currentPrice - (currentPrice * discount / 100);
+  }
+  
+  return currentPrice;
+}
+
+// Example: $100 with 10% then 20% discount
+// NOT: $100 - $10 - $20 = $70
+// BUT: $100 - $10 = $90, then $90 - $18 = $72
+final price = applyCascadingDiscounts(100, [10, 20]); // 72.0
+```
+
+### Validation Rules
+
+**Required Validations**:
+
+1. **Prevent negative prices/costs**:
+```dart
+if (cost < 0) {
+  throw ArgumentError('Cost cannot be negative');
+}
+```
+
+2. **Prevent invalid margins/discounts**:
+```dart
+if (marginPercent >= 100) {
+  throw ArgumentError('Margin percentage must be less than 100%');
+}
+
+if (discountPercent >= 100 || discountPercent < 0) {
+  throw ArgumentError('Discount must be between 0% and 100%');
+}
+```
+
+3. **Handle division by zero**:
+```dart
+if (quantity == 0) {
+  throw ArgumentError('Quantity cannot be zero');
+}
+```
+
+## Testing Requirements
+
+### Mandatory Test Coverage
+
+<Warning>
+  **100% unit test coverage is MANDATORY** for all mathematical calculation providers. This is non-negotiable for a financial/math suite.
+</Warning>
+
+#### Test Coverage Rules
+
+1. **All Providers**: 100% coverage for calculation methods
+2. **Edge Cases**: Must test all edge cases
+3. **Error Handling**: Test all validation and error paths
+4. **Persistence**: Mock `SharedPreferences` properly
+
+#### Required Edge Case Tests
+
+```dart
+test('handles division by zero', () {
+  expect(
+    () => provider.calculatePerUnit(100, 0),
+    throwsA(isA<ArgumentError>()),
+  );
+});
+
+test('handles null input', () {
+  provider.setCost('invalid');
+  expect(provider.errorMessage, isNotNull);
+});
+
+test('handles negative numbers', () {
+  expect(
+    () => provider.calculatePrice(-100, 20),
+    throwsA(isA<ArgumentError>()),
+  );
+});
+
+test('handles extremely large numbers', () {
+  final result = provider.calculatePrice(double.maxFinite / 2, 10);
+  expect(result, isFinite);
+});
+
+test('handles invalid string formats', () {
+  provider.setCost('$1,234.56abc');
+  expect(provider.result, isNull);
+});
+```
+
+#### Mocking SharedPreferences
+
+```dart
+setUp(() async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+  provider = MyProvider(prefs);
+});
+```
+
+### Self-Healing Test Loop
+
+**Rule**: Do not consider a task complete until `flutter analyze` and `flutter test` pass with 0 issues.
+
+```bash
+# Development loop
+flutter test
+# If fails:
+#   1. Analyze output
+#   2. Fix code
+#   3. Run flutter test again
+#   4. Repeat until all pass
+```
+
+## Git Standards
+
+### Conventional Commits
+
+**Required Format**: All commits must follow the conventional commit specification.
+
+**Format**: `<type>(<scope>): <description>`
+
+**Types**:
+- `feat`: New feature
+- `fix`: Bug fix
+- `refactor`: Code change (not bug fix or feature)
+- `chore`: Build tasks, dependencies, maintenance
+- `test`: Adding or updating tests
+- `docs`: Documentation only
+- `style`: Code style changes (formatting, semicolons, etc.)
+- `perf`: Performance improvements
+
+**Examples**:
+```bash
+feat(discount): add cascading discount calculation
+fix(sales-price): prevent negative gross margin values
+refactor(inventory): extract product model to separate file
+test(discount): add edge case tests for zero values
+docs(readme): update architecture diagram
+chore(deps): upgrade provider to 6.1.5
+style(discount): format code with dartfmt
+perf(sales-price): optimize calculation method
+```
+
+<Warning>
+  Generic commit messages like "updated files" or "fixes" are not acceptable and will be rejected.
+</Warning>
+
+### Atomic Commits
+
+**Rule**: Commit changes immediately after a logical unit of work is completed and verified (tests passing).
+
+**Good Atomic Commits**:
+- One feature addition
+- One bug fix
+- One refactoring operation
+- One test suite addition
+
+**Bad Non-Atomic Commits**:
+- 10 features in one commit
+- Mix of features and bug fixes
+- Multiple unrelated changes
+
+### Branch Strategy
+
+**Branches**:
+- `main`: Production-ready releases only
+- `dev`: Active development branch
+- `feature/<name>`: Feature branches (created from `dev`)
+- `fix/<name>`: Bug fix branches (created from `dev`)
+
+**Workflow**:
+```bash
+# Start new feature
+git checkout dev
+git pull origin dev
+git checkout -b feature/new-calculator
+
+# Develop and commit
+git add .
+git commit -m "feat(calculator): add new calculator feature"
+
+# Before pushing
+flutter analyze && flutter test
+
+# Push and create PR
+git push origin feature/new-calculator
+```
+
+## UI/UX Standards
+
+### Responsive Design Requirements
+
+**Rule**: Never hardcode heights or widths. Use constraints and flexible layouts.
+
+```dart
+// ❌ BAD: Hardcoded dimensions
+Container(
+  height: 80,
+  width: 200,
+  child: Text('Hello'),
+)
+
+// ✅ GOOD: Responsive constraints
+Container(
+  constraints: BoxConstraints(
+    minHeight: 80,
+    maxWidth: 200,
+  ),
+  child: Expanded(
+    child: Text(
+      'Hello',
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    ),
+  ),
+)
+```
+
+### Material 3 Theming
+
+**Rule**: Use `Theme.of(context).colorScheme` for all colors. Avoid hardcoded colors.
+
+```dart
+// ❌ BAD: Hardcoded colors
+Container(
+  color: Colors.red,
+  child: Text('Error', style: TextStyle(color: Colors.white)),
+)
+
+// ✅ GOOD: Theme-based colors
+Container(
+  color: Theme.of(context).colorScheme.errorContainer,
+  child: Text(
+    'Error',
+    style: TextStyle(
+      color: Theme.of(context).colorScheme.onErrorContainer,
+    ),
+  ),
+)
+```
+
+**Common ColorScheme Properties**:
+- `primary`, `onPrimary`
+- `secondary`, `onSecondary`
+- `error`, `onError`
+- `surface`, `onSurface`
+- `primaryContainer`, `onPrimaryContainer`
+- `errorContainer`, `onErrorContainer`
+
+### Performance Target
+
+**Rule**: Target 60 FPS minimum (120 FPS on high-refresh displays).
+
+**Performance Checklist**:
+- Use `const` constructors where possible
+- Optimize Provider rebuilds with `Consumer`
+- Avoid expensive operations in `build` methods
+- Use `RepaintBoundary` for complex widgets
+- Profile with `flutter run --profile`
+
+## Documentation Standards
+
+### DartDoc Comments
+
+**Rule**: Use DartDoc (`///`) for all public classes, especially Providers and complex Services.
+
+```dart
+/// Manages state for the discount calculator feature.
+/// 
+/// Handles calculation of final prices after applying single or
+/// cascading discounts. Persists user inputs using SharedPreferences.
+class DiscountCalculatorProvider extends ChangeNotifier {
+  /// The original price before discounts.
+  double? _originalPrice;
+  
+  /// Calculates the final price after applying all discounts.
+  /// 
+  /// Throws [ArgumentError] if [originalPrice] is negative or
+  /// if any discount percentage is invalid.
+  double calculateFinalPrice(
+    double originalPrice,
+    List<double> discountPercents,
+  ) {
+    // Implementation
+  }
+}
+```
+
+### Comment Philosophy
+
+**Rule**: Comment the "why", not the "what".
+
+```dart
+// ❌ BAD: Obvious comment
+finalPrice = cost * 1.2; // Multiply cost by 1.2
+
+// ✅ GOOD: Explains reasoning
+// Apply 20% markup using the markup formula: Cost × (1 + %/100)
+// We use this instead of gross margin because the client requested
+// markup-based pricing for this feature.
+finalPrice = cost * 1.2;
+```
+
+## Code Quality Checklist
+
+Before submitting code, verify:
+
+- [ ] Feature follows feature-first architecture
+- [ ] All files use proper naming conventions
+- [ ] Providers use `Consumer` for granular rebuilds
+- [ ] State is persisted with `SharedPreferences`
+- [ ] All user input uses `double.tryParse()`
+- [ ] Display values are formatted (no floating-point display errors)
+- [ ] All validation rules are implemented
+- [ ] 100% test coverage for math providers
+- [ ] All edge cases are tested
+- [ ] `flutter analyze` passes with 0 issues
+- [ ] `flutter test` passes with 0 failures
+- [ ] Commit messages follow conventional format
+- [ ] Code is committed atomically
+- [ ] UI uses `Theme.of(context).colorScheme`
+- [ ] No hardcoded dimensions
+- [ ] DartDoc comments on public classes
+
+<Note>
+  These standards are enforced by the AI ecosystem and code reviews. Familiarize yourself with the `.ai/` directory for detailed implementation guidance.
+</Note>

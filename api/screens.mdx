@@ -1,0 +1,382 @@
+---
+title: 'Screen Components'
+description: 'Flutter screen widgets for Numix calculators and navigation'
+icon: 'mobile'
+---
+
+Numix provides several screen components that make up the application's user interface. These screens handle discount calculations, sales price calculations, inventory management, and sales history.
+
+## Calculator Screens
+
+### ScreenOne (DiscountCalculatorScreen)
+
+The discount calculator screen provides a form-based interface for calculating discounts with support for multiple discount types, additional discounts, and tax.
+
+```dart
+class ScreenOne extends StatefulWidget {
+  const ScreenOne({super.key});
+}
+```
+
+#### Features
+
+- **Discount Type Toggle**: Switch between percentage and fixed-amount discounts
+- **Form Validation**: Validates numeric inputs and ranges
+- **Persistent State**: Restores previous inputs from the provider
+- **Real-time Calculations**: Updates results as discount type changes
+- **Results Display**: Shows original price, savings, subtotal, tax, and final price
+- **Clear Function**: Reset button to clear all inputs and results
+
+#### Form Fields
+
+<ParamField path="originalPrice" type="TextFormField">
+  The original price before any discounts. Required field with decimal validation.
+</ParamField>
+
+<ParamField path="primaryDiscount" type="TextFormField">
+  The primary discount value. Label and icon change based on discount type.
+</ParamField>
+
+<ParamField path="additionalDiscount" type="TextFormField">
+  Optional additional discount applied sequentially (percentage) or summed (fixed).
+</ParamField>
+
+<ParamField path="tax" type="TextFormField">
+  Optional tax percentage (IVA) applied to the subtotal.
+</ParamField>
+
+#### Usage
+
+```dart
+import 'package:numix/features/discount_calculator/screens/discount_calculator_screen.dart';
+
+Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => const ScreenOne()),
+);
+```
+
+#### UI Components
+
+- Form validation with inline error messages
+- Card-based layout with elevation
+- Currency formatting (`$XX.XX`)
+- Color-coded results (green for savings, red for tax)
+- Responsive padding and spacing
+- App bar with refresh action
+
+### ScreenTwo (SalesPriceCalculatorScreen)
+
+The sales price calculator screen helps determine selling prices based on cost and desired profit margins.
+
+```dart
+class ScreenTwo extends StatefulWidget {
+  const ScreenTwo({super.key});
+}
+```
+
+#### Features
+
+- **Margin Type Toggle**: Switch between markup (profit on cost) and margin (profit on sales)
+- **Form Validation**: Validates cost and profit percentage inputs
+- **Persistent State**: Automatically restores previous calculations
+- **Financial Summary**: Displays base price, profit amount, tax, and final selling price
+- **Clear Function**: Reset button to start a new calculation
+
+#### Form Fields
+
+<ParamField path="cost" type="TextFormField">
+  The base cost of the product. Required field with decimal validation.
+</ParamField>
+
+<ParamField path="profitPercent" type="TextFormField">
+  The desired profit percentage. Interpretation depends on margin type.
+</ParamField>
+
+<ParamField path="tax" type="TextFormField">
+  Optional tax percentage (IVA) applied to the base sale price.
+</ParamField>
+
+#### Usage
+
+```dart
+import 'package:numix/features/sales_price_calculator/screens/sales_price_calculator_screen.dart';
+
+Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => const ScreenTwo()),
+);
+```
+
+#### Margin Type Display
+
+The toggle shows:
+- **"Sobre Costo"** (Markup): Profit calculated as percentage of cost
+- **"Sobre Venta (Pro)"** (Margin): Profit calculated as percentage of selling price
+
+## Placeholder Screens
+
+### ScreenThree (ProductInventoryScreen)
+
+A placeholder screen for future product inventory management functionality.
+
+```dart
+class ScreenThree extends StatelessWidget {
+  const ScreenThree({super.key});
+}
+```
+
+#### Current Implementation
+
+Displays:
+- Large inventory icon
+- Welcome message
+- "Return to Home" button
+
+#### Usage
+
+```dart
+import 'package:numix/features/product_inventory/screens/product_inventory_screen.dart';
+
+Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => const ScreenThree()),
+);
+```
+
+<Note>
+This screen is a placeholder and will be expanded in future releases to include product catalog management, stock tracking, and inventory operations.
+</Note>
+
+### ScreenFour (SalesHistoryScreen)
+
+A placeholder screen for future sales history and reporting functionality.
+
+```dart
+class ScreenFour extends StatelessWidget {
+  const ScreenFour({super.key});
+}
+```
+
+#### Current Implementation
+
+Displays:
+- Large history icon
+- Welcome message
+- "Return to Home" button
+
+#### Usage
+
+```dart
+import 'package:numix/features/sales_history/screens/sales_history_screen.dart';
+
+Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => const ScreenFour()),
+);
+```
+
+<Note>
+This screen is a placeholder and will be expanded in future releases to include sales transaction history, analytics, and reporting features.
+</Note>
+
+## Navigation Screens
+
+### MyHomePage
+
+The main navigation hub with animated menu buttons for accessing all features.
+
+```dart
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key, required this.title});
+  final String title;
+}
+```
+
+#### Properties
+
+<ParamField path="title" type="String" required>
+  The title displayed in the app bar (typically "Calculadora Numix")
+</ParamField>
+
+#### Features
+
+- **Responsive Layout**: Adapts button width based on screen size
+- **Smooth Animations**: Scale animation on hover using `MouseRegion`
+- **Theme Toggle**: Switch between light and dark mode
+- **Centered Title**: Displays app name in the app bar
+- **Menu Buttons**: Four large, accessible buttons for main features
+
+#### Menu Items
+
+1. **Calculadora de Descuentos** (Discount Calculator)
+   - Icon: `Icons.discount`
+   - Navigates to `ScreenOne`
+
+2. **Calculadora Precios Venta** (Sales Price Calculator)
+   - Icon: `Icons.price_change`
+   - Navigates to `ScreenTwo`
+
+3. **Inventario de Productos** (Product Inventory)
+   - Icon: `Icons.inventory`
+   - Navigates to `ScreenThree`
+
+4. **Historial de Ventas** (Sales History)
+   - Icon: `Icons.history`
+   - Navigates to `ScreenFour`
+
+#### Usage
+
+```dart
+import 'package:numix/features/home/screens/home_page.dart';
+
+// In your main app or navigation
+MaterialPageRoute(
+  builder: (context) => const MyHomePage(title: 'Calculadora Numix'),
+)
+```
+
+#### Button Styling
+
+- Adaptive width: 70% on desktop (>600px), 90% on mobile
+- Minimum height: 80px
+- Rounded corners with 15px radius
+- Elevation: 4
+- Row layout with icon, text, and arrow
+
+### WelcomeScreen
+
+An animated splash screen that displays the Numix logo and automatically navigates to the home page.
+
+```dart
+class WelcomeScreen extends StatefulWidget {
+  const WelcomeScreen({super.key});
+}
+```
+
+#### Features
+
+- **Fade Animation**: 2-second fade-in animation for the logo and text
+- **Auto Navigation**: Automatically navigates to `MyHomePage` after 3 seconds
+- **Centered Layout**: Logo and app name centered on screen
+- **Smooth Transition**: Uses `pushReplacement` to prevent back navigation
+
+#### Implementation Details
+
+- Uses `SingleTickerProviderStateMixin` for animation controller
+- Animation duration: 2 seconds
+- Display duration: 3 seconds total
+- Fade opacity: 0 to 1
+
+#### Usage
+
+```dart
+import 'package:numix/features/welcome/screens/welcome_screen.dart';
+
+// Typically set as the initial route
+MaterialApp(
+  home: const WelcomeScreen(),
+)
+```
+
+#### UI Components
+
+- Large calculator icon (100px, blue color)
+- "¡Numix!" title text (32px, bold)
+- 20px spacing between elements
+
+## Common Patterns
+
+### Form Validation
+
+All calculator screens use `GlobalKey<FormState>` for form validation:
+
+```dart
+final _formKey = GlobalKey<FormState>();
+
+void _calculateDiscount() {
+  if (_formKey.currentState!.validate()) {
+    // Perform calculation
+  }
+}
+```
+
+### Text Input Formatting
+
+Numeric inputs use `FilteringTextInputFormatter` to allow only decimal numbers:
+
+```dart
+inputFormatters: [
+  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+]
+```
+
+This pattern:
+- Allows digits 0-9
+- Allows one optional decimal point
+- Limits to 2 decimal places
+
+### Currency Formatting
+
+All screens format currency values consistently:
+
+```dart
+String _formatCurrency(double value) {
+  return '\$${value.toStringAsFixed(2)}';
+}
+```
+
+### Provider Integration
+
+Screens use `Consumer` widgets to react to provider state changes:
+
+```dart
+Consumer<DiscountCalculatorProvider>(
+  builder: (context, provider, child) {
+    if (provider.errorMessage != null) {
+      // Show error
+    }
+    if (provider.finalPrice != null) {
+      // Show results
+    }
+    return const SizedBox.shrink();
+  },
+)
+```
+
+### State Restoration
+
+Calculator screens restore previous inputs on initialization:
+
+```dart
+@override
+void initState() {
+  super.initState();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final provider = context.read<DiscountCalculatorProvider>();
+    if (provider.originalPriceInput.isNotEmpty) {
+      _controller.text = provider.originalPriceInput;
+    }
+  });
+}
+```
+
+## Screen Transitions
+
+All screens use standard `MaterialPageRoute` for navigation:
+
+```dart
+Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => const ScreenOne()),
+);
+```
+
+The welcome screen uses `pushReplacement` to prevent returning to the splash:
+
+```dart
+Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(builder: (context) => const MyHomePage(title: 'Calculadora Numix')),
+);
+```

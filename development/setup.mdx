@@ -1,0 +1,298 @@
+---
+title: Development Setup
+description: Set up your local environment to contribute to Numix
+---
+
+This guide will walk you through setting up your development environment for contributing to the Numix project.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Flutter SDK**: Version 3.6.0 or higher
+- **Dart**: Included with Flutter SDK (version 3.6.0+)
+- **Git**: For version control
+- **IDE**: VS Code or Android Studio with Flutter/Dart plugins
+
+<Note>
+  Numix follows strict architectural and code quality standards enforced by our AI ecosystem. Familiarize yourself with the `.ai/` directory structure before contributing.
+</Note>
+
+## Setup Instructions
+
+<Steps>
+  <Step title="Install Flutter SDK">
+    Download and install Flutter SDK version 3.6.0 or higher from the [official Flutter website](https://flutter.dev/docs/get-started/install).
+
+    Verify your installation:
+
+    ```bash
+    flutter --version
+    ```
+
+    You should see output confirming Flutter 3.6.0 or higher.
+  </Step>
+
+  <Step title="Clone the Repository">
+    Clone the Numix repository to your local machine:
+
+    ```bash
+    git clone <repository-url>
+    cd numix
+    ```
+
+    <Warning>
+      **Never code directly on `main`**. All development must be done on the `dev` branch or feature branches created from `dev`. The `main` branch is reserved for stable releases only.
+    </Warning>
+
+    Switch to the development branch:
+
+    ```bash
+    git checkout dev
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install all required Flutter packages defined in `pubspec.yaml`:
+
+    ```bash
+    flutter pub get
+    ```
+
+    This will install:
+    - **provider** (v6.1.5+1): State management
+    - **math_expressions** (v3.0.0): Mathematical expression parsing
+    - **shared_preferences** (v2.3.2): Local data persistence
+    - **cupertino_icons** (v1.0.8): iOS-style icons
+  </Step>
+
+  <Step title="Verify Installation">
+    Run the analyzer to ensure your environment is properly configured:
+
+    ```bash
+    flutter analyze
+    ```
+
+    This should complete with no errors or warnings.
+  </Step>
+
+  <Step title="Run Tests">
+    Execute the test suite to verify everything works correctly:
+
+    ```bash
+    flutter test
+    ```
+
+    <Note>
+      **100% test coverage is mandatory** for all mathematical calculation providers. The test suite enforces this for financial accuracy and reliability.
+    </Note>
+
+    To run tests for specific features:
+
+    ```bash
+    flutter test test/features/discount_calculator/
+    flutter test test/features/sales_price_calculator/
+    ```
+  </Step>
+
+  <Step title="Run the Application">
+    Launch the app in development mode:
+
+    ```bash
+    flutter run
+    ```
+
+    For a specific device:
+
+    ```bash
+    flutter devices  # List available devices
+    flutter run -d <device-id>
+    ```
+
+    To enable debug mode with hot reload:
+
+    ```bash
+    flutter run --debug
+    ```
+  </Step>
+</Steps>
+
+## Development Workflow
+
+### Branch Strategy
+
+Numix uses a secure DevSecOps workflow:
+
+- **`main`**: Production-ready, stable releases only
+- **`dev`**: Active development branch
+- **Feature branches**: Created from `dev` for specific features (e.g., `feature/new-calculator`)
+
+### Pre-Push Validation
+
+Before pushing code or creating a pull request, always run:
+
+```bash
+flutter analyze && flutter test
+```
+
+Both commands must pass with zero issues.
+
+### Verify Math Command
+
+Use the custom verification command to validate mathematical accuracy:
+
+```bash
+flutter analyze
+flutter test test/features/
+```
+
+This ensures 100% of mathematical provider tests pass.
+
+## Project Structure
+
+Numix follows a **Domain-Driven Feature-First** architecture:
+
+```
+lib/
+├── core/                    # Shared utilities, themes, constants
+│   ├── theme/
+│   ├── utils/
+│   └── formatters/
+├── features/                # Isolated feature domains
+│   ├── discount_calculator/
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   ├── providers/
+│   │   └── models/
+│   ├── sales_price_calculator/
+│   ├── product_inventory/
+│   ├── sales_history/
+│   ├── home/
+│   └── welcome/
+```
+
+<Note>
+  Each feature is completely isolated with its own UI, state management, and business logic. Never cross-import UI components between features unless they're shared core widgets.
+</Note>
+
+## Common Development Tasks
+
+### Adding a New Dependency
+
+1. Add the package to `pubspec.yaml`:
+
+```yaml
+dependencies:
+  new_package: ^1.0.0
+```
+
+2. Run `flutter pub get`
+
+3. Update documentation in `.ai/skills/` if it introduces new architectural patterns
+
+### Debugging
+
+Enable verbose logging:
+
+```bash
+flutter run -v
+```
+
+For native build issues:
+
+```bash
+flutter clean
+flutter pub get
+flutter run
+```
+
+### Performance Profiling
+
+Run performance profiling:
+
+```bash
+flutter run --profile
+```
+
+Target 60 FPS minimum (120 FPS on high-refresh displays).
+
+## IDE Setup
+
+### VS Code
+
+Recommended extensions:
+- Flutter
+- Dart
+- Dart Data Class Generator
+- Error Lens
+
+### Android Studio
+
+Install:
+- Flutter plugin
+- Dart plugin
+
+Configure Dart analysis options in `analysis_options.yaml` (already configured in the project).
+
+## Troubleshooting
+
+<Accordion title="Build fails with dependency conflicts">
+  Run the following commands:
+
+  ```bash
+  flutter clean
+  flutter pub get
+  flutter pub upgrade
+  ```
+
+  If issues persist, delete the `pubspec.lock` file and run `flutter pub get` again.
+</Accordion>
+
+<Accordion title="Tests fail unexpectedly">
+  Ensure you're using mock values for SharedPreferences:
+
+  ```dart
+  SharedPreferences.setMockInitialValues({});
+  ```
+
+  Check that all test files properly import the test package and set up providers correctly.
+</Accordion>
+
+<Accordion title="Hot reload not working">
+  1. Stop the current run
+  2. Run `flutter clean`
+  3. Restart the app with `flutter run`
+
+  For persistent issues, restart your IDE.
+</Accordion>
+
+<Accordion title="Native build errors (Android/iOS)">
+  For Android:
+  ```bash
+  cd android
+  ./gradlew clean
+  cd ..
+  flutter clean
+  flutter run
+  ```
+
+  For iOS:
+  ```bash
+  cd ios
+  pod deintegrate
+  pod install
+  cd ..
+  flutter clean
+  flutter run
+  ```
+</Accordion>
+
+## Next Steps
+
+- Learn about the [AI Ecosystem](/development/ai-ecosystem) that maintains code quality
+- Review [Code Standards](/development/code-standards) before making changes
+- Explore the feature-first architecture in the codebase
+
+<Warning>
+  Always ensure `.gitignore` prevents committing secrets like `.env`, `key.properties`, `*.jks`, and `*.keystore` files.
+</Warning>

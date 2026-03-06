@@ -1,0 +1,244 @@
+---
+title: 'DiscountCalculatorProvider'
+description: 'State management provider for discount calculations with support for percentage and fixed-amount discounts'
+icon: 'percent'
+---
+
+The `DiscountCalculatorProvider` manages the state and business logic for discount calculations. It extends `ChangeNotifier` and persists user inputs using `SharedPreferences`.
+
+## Overview
+
+This provider handles two types of discounts:
+- **Percentage discounts**: Apply sequential percentage-based discounts
+- **Fixed amount discounts**: Apply dollar-value discounts
+
+It automatically persists all inputs and calculation results across app sessions.
+
+## Enums
+
+### DiscountType
+
+Defines the type of discount being applied.
+
+```dart
+enum DiscountType {
+  percentage,
+  fixedAmount,
+}
+```
+
+<ParamField path="percentage" type="DiscountType">
+  Apply discounts as percentages (e.g., 10% off)
+</ParamField>
+
+<ParamField path="fixedAmount" type="DiscountType">
+  Apply discounts as fixed dollar amounts (e.g., $50 off)
+</ParamField>
+
+## Constructor
+
+```dart
+DiscountCalculatorProvider(SharedPreferences prefs)
+```
+
+<ParamField path="prefs" type="SharedPreferences" required>
+  The SharedPreferences instance used for persisting calculator state
+</ParamField>
+
+## Getters
+
+### Calculation Results
+
+<ResponseField name="subtotal" type="double?">
+  The price after discounts but before tax
+</ResponseField>
+
+<ResponseField name="finalPrice" type="double?">
+  The final price after all discounts and tax
+</ResponseField>
+
+<ResponseField name="savedAmount" type="double?">
+  The total amount saved from all discounts
+</ResponseField>
+
+<ResponseField name="taxAmount" type="double?">
+  The calculated tax amount based on the subtotal
+</ResponseField>
+
+<ResponseField name="errorMessage" type="String?">
+  Error message if validation fails, null otherwise
+</ResponseField>
+
+### Configuration
+
+<ResponseField name="discountType" type="DiscountType">
+  The current discount type (percentage or fixedAmount)
+</ResponseField>
+
+### Input State
+
+<ResponseField name="originalPriceInput" type="String">
+  The persisted original price input string
+</ResponseField>
+
+<ResponseField name="primaryDiscountInput" type="String">
+  The persisted primary discount input string
+</ResponseField>
+
+<ResponseField name="additionalDiscountInput" type="String">
+  The persisted additional discount input string
+</ResponseField>
+
+<ResponseField name="taxInput" type="String">
+  The persisted tax percentage input string
+</ResponseField>
+
+<ResponseField name="originalPrice" type="double?">
+  The parsed original price value for display
+</ResponseField>
+
+## Methods
+
+### calculateDiscount
+
+Performs the discount calculation with the provided inputs.
+
+```dart
+void calculateDiscount({
+  required String originalPriceStr,
+  required String primaryDiscountStr,
+  String additionalDiscountStr = '',
+  String taxStr = '',
+})
+```
+
+<ParamField path="originalPriceStr" type="String" required>
+  The original price before any discounts
+</ParamField>
+
+<ParamField path="primaryDiscountStr" type="String" required>
+  The primary discount value (percentage or fixed amount depending on discountType)
+</ParamField>
+
+<ParamField path="additionalDiscountStr" type="String" default="">
+  Optional additional discount applied sequentially after the primary discount
+</ParamField>
+
+<ParamField path="taxStr" type="String" default="">
+  Optional tax percentage to apply to the subtotal
+</ParamField>
+
+#### Calculation Logic
+
+**For Percentage Discounts:**
+1. Apply primary discount: `saved1 = originalPrice * (primaryDiscount / 100)`
+2. Apply additional discount to new price: `saved2 = priceAfterFirst * (additionalDiscount / 100)`
+3. Calculate subtotal: `subtotal = originalPrice - saved1 - saved2`
+4. Apply tax: `taxAmount = subtotal * (taxPercent / 100)`
+5. Calculate final price: `finalPrice = subtotal + taxAmount`
+
+**For Fixed Amount Discounts:**
+1. Sum all discounts: `totalDiscount = primaryDiscount + additionalDiscount`
+2. Calculate subtotal: `subtotal = originalPrice - totalDiscount`
+3. Apply tax: `taxAmount = subtotal * (taxPercent / 100)`
+4. Calculate final price: `finalPrice = subtotal + taxAmount`
+
+#### Validation
+
+The method validates:
+- All numeric inputs are valid numbers
+- No negative values
+- Percentage discounts don't exceed 100%
+- Fixed discounts don't exceed original price
+
+If validation fails, `errorMessage` is set and results are cleared.
+
+### setDiscountType
+
+Changes the discount type and persists the selection.
+
+```dart
+void setDiscountType(DiscountType type)
+```
+
+<ParamField path="type" type="DiscountType" required>
+  The new discount type to apply
+</ParamField>
+
+This method automatically persists the selection to SharedPreferences and notifies listeners.
+
+### clear
+
+Resets all inputs and calculation results.
+
+```dart
+void clear()
+```
+
+This method:
+- Clears all input strings
+- Removes persisted values from SharedPreferences
+- Clears all calculation results
+- Clears any error messages
+- Notifies listeners of the state change
+
+## Usage Example
+
+```dart
+import 'package:provider/provider.dart';
+import 'package:numix/features/discount_calculator/providers/discount_provider.dart';
+
+// In your widget
+final provider = context.read<DiscountCalculatorProvider>();
+
+// Set discount type
+provider.setDiscountType(DiscountType.percentage);
+
+// Calculate discount
+provider.calculateDiscount(
+  originalPriceStr: '100.00',
+  primaryDiscountStr: '20',      // 20% off
+  additionalDiscountStr: '10',   // Additional 10% off
+  taxStr: '8.5',                 // 8.5% tax
+);
+
+// Access results
+if (provider.errorMessage != null) {
+  print('Error: ${provider.errorMessage}');
+} else {
+  print('Original Price: \$${provider.originalPrice}');
+  print('Amount Saved: \$${provider.savedAmount}');
+  print('Subtotal: \$${provider.subtotal}');
+  print('Tax: \$${provider.taxAmount}');
+  print('Final Price: \$${provider.finalPrice}');
+}
+
+// Clear all
+provider.clear();
+```
+
+## UI Integration
+
+This provider is typically used with `Consumer` widgets to reactively update the UI:
+
+```dart
+Consumer<DiscountCalculatorProvider>(
+  builder: (context, provider, child) {
+    if (provider.finalPrice != null) {
+      return Text('Final Price: \$${provider.finalPrice!.toStringAsFixed(2)}');
+    }
+    return const SizedBox.shrink();
+  },
+)
+```
+
+## Persistence
+
+All user inputs are automatically persisted using the following SharedPreferences keys:
+- `disc_orig` - Original price
+- `disc_pri` - Primary discount
+- `disc_add` - Additional discount
+- `disc_tax` - Tax percentage
+- `disc_type` - Discount type (0 = percentage, 1 = fixed amount)
+
+The provider automatically restores these values when initialized.

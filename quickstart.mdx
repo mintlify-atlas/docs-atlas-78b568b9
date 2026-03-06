@@ -1,80 +1,529 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get up and running with Numix in 5 minutes
 ---
 
-## Get started in three steps
+## Get Started with Numix
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will take you from installation to using Numix's powerful calculation features in just a few minutes. By the end, you'll have the app running and understand how to use each calculator.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Before starting, make sure you've completed the [Installation](/installation) guide and have Flutter SDK 3.6.0 or higher installed.
 </Note>
+
+## Launch Numix
+
+<Steps>
+  <Step title="Clone and Setup">
+    If you haven't already, clone the repository and install dependencies:
+    
+    ```bash
+    git clone <repository-url> numix
+    cd numix
+    flutter pub get
+    ```
+  </Step>
+  
+  <Step title="Start an Emulator or Connect a Device">
+    Launch an Android emulator, iOS simulator, or connect a physical device:
+    
+    <Tabs>
+      <Tab title="Android Emulator">
+        ```bash
+        # List available emulators
+        flutter emulators
+        
+        # Launch an emulator
+        flutter emulators --launch <emulator-id>
+        ```
+      </Tab>
+      <Tab title="iOS Simulator">
+        ```bash
+        # Open iOS Simulator
+        open -a Simulator
+        ```
+      </Tab>
+      <Tab title="Physical Device">
+        Connect your device via USB and ensure USB debugging is enabled (Android) or the device is trusted (iOS).
+        
+        Verify the device is detected:
+        ```bash
+        flutter devices
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Run the Application">
+    Launch Numix on your connected device:
+    
+    ```bash
+    flutter run
+    ```
+    
+    The app will compile and install on your device. This may take a minute or two on the first run.
+    
+    <Note>
+      For faster subsequent runs, use hot reload (press `r` in the terminal) or hot restart (press `R`) during development.
+    </Note>
+  </Step>
+  
+  <Step title="Welcome to Numix!">
+    Once launched, you'll see the Numix welcome screen, followed by the home page displaying four main features:
+    
+    - **Calculadora de Descuentos** (Discount Calculator)
+    - **Calculadora Precios Venta** (Sales Price Calculator)
+    - **Inventario de Productos** (Product Inventory)
+    - **Historial de Ventas** (Sales History)
+  </Step>
+</Steps>
+
+## Explore the Features
+
+### Home Page Navigation
+
+The Numix home page provides quick access to all features. Here's what the main navigation looks like:
+
+```dart lib/features/home/screens/home_page.dart
+Scaffold(
+  appBar: AppBar(
+    backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+    title: Center(child: Text(widget.title)),
+    actions: [
+      IconButton(
+        icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+        onPressed: () {
+          MyApp.of(context)?.toggleTheme();
+        },
+      ),
+    ],
+  ),
+  // ...
+)
+```
+
+<Tip>
+  Notice the theme toggle icon in the app bar? Numix supports both light and dark themes. Tap the icon to switch between themes based on your preference.
+</Tip>
+
+### Using the Discount Calculator
+
+<Steps>
+  <Step title="Navigate to Discount Calculator">
+    From the home page, tap on **"Calculadora de Descuentos"** (Discount Calculator).
+  </Step>
+  
+  <Step title="Select Discount Type">
+    Choose between two discount calculation modes:
+    
+    - **Percentage**: Apply discounts as percentages (e.g., 20% off)
+    - **Fixed Amount**: Apply discounts as fixed monetary amounts (e.g., $50 off)
+  </Step>
+  
+  <Step title="Enter Values">
+    Fill in the required fields:
+    
+    - **Original Price**: The starting price before discounts
+    - **Primary Discount**: The first discount to apply
+    - **Additional Discount** (optional): A second discount applied sequentially
+    - **Tax** (optional): Tax percentage to add to the final price
+    
+    <Note>
+      Discounts are applied sequentially. For percentage discounts, the additional discount is calculated on the price after the primary discount.
+    </Note>
+  </Step>
+  
+  <Step title="View Results">
+    The calculator automatically displays:
+    
+    - **Subtotal**: Price after all discounts, before tax
+    - **Tax Amount**: Calculated tax based on the subtotal
+    - **Final Price**: Total amount after discounts and tax
+    - **Total Saved**: How much you saved from the original price
+  </Step>
+</Steps>
+
+#### Discount Calculator Logic
+
+Here's how the discount calculator handles percentage-based discounts:
+
+```dart lib/features/discount_calculator/providers/discount_provider.dart
+if (_discountType == DiscountType.percentage) {
+  if (primaryDiscount > 100 || additionalDiscount > 100) {
+    _errorMessage = "Los porcentajes de descuento no pueden exceder 100%";
+    _clearResults();
+    notifyListeners();
+    return;
+  }
+
+  double saved1 = currentPrice * (primaryDiscount / 100);
+  currentPrice -= saved1;
+  totalSaved += saved1;
+
+  if (additionalDiscount > 0) {
+    double saved2 = currentPrice * (additionalDiscount / 100);
+    currentPrice -= saved2;
+    totalSaved += saved2;
+  }
+}
+```
+
+<Warning>
+  The calculator validates all inputs. Percentage discounts cannot exceed 100%, and fixed discounts cannot be greater than the original price. Invalid inputs will display clear error messages.
+</Warning>
+
+### Using the Sales Price Calculator
+
+<Steps>
+  <Step title="Navigate to Sales Price Calculator">
+    From the home page, tap on **"Calculadora Precios Venta"** (Sales Price Calculator).
+  </Step>
+  
+  <Step title="Choose Calculation Method">
+    Select between two profit calculation methods:
+    
+    - **Markup**: Calculate price by adding a percentage profit to the cost
+      - Formula: `Sale Price = Cost + (Cost × Profit %)`
+      - Example: $100 cost + 50% markup = $150 sale price
+    
+    - **Margin**: Calculate price from desired profit margin on selling price
+      - Formula: `Sale Price = Cost ÷ (1 - Margin %)`
+      - Example: $100 cost with 33.33% margin = $150 sale price
+  </Step>
+  
+  <Step title="Enter Values">
+    Fill in the calculator fields:
+    
+    - **Cost**: The cost price of the product
+    - **Profit Percentage**: Desired profit as a percentage (markup or margin)
+    - **Tax** (optional): Tax percentage to add to the final price
+  </Step>
+  
+  <Step title="View Calculated Price">
+    The calculator shows:
+    
+    - **Base Sale Price**: Price before tax
+    - **Profit Amount**: How much profit you'll make
+    - **Tax Amount**: Calculated tax
+    - **Final Price**: Total selling price including tax
+  </Step>
+</Steps>
+
+#### Sales Price Calculation Logic
+
+The calculator handles both markup and margin calculations:
+
+```dart lib/features/sales_price_calculator/providers/sales_price_provider.dart
+if (_marginType == MarginType.markup) {
+  _profitAmount = cost * (profitPercent / 100);
+  _baseSalePrice = cost + _profitAmount!;
+} else {
+  _baseSalePrice = cost / (1 - (profitPercent / 100));
+  _profitAmount = _baseSalePrice! - cost;
+}
+
+_taxAmount = _baseSalePrice! * (taxPercent / 100);
+_finalPrice = _baseSalePrice! + _taxAmount!;
+```
+
+<Tip>
+  **Markup vs Margin**: Use markup when you think about profit over cost ("I want to add 50% to my cost"). Use margin when you think about profit as part of the selling price ("I want 33% of the selling price to be profit").
+</Tip>
+
+## Understanding the Architecture
+
+### State Management with Provider
+
+Numix uses the `provider` package for state management. Here's how the app is structured:
+
+```dart lib/main.dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+            create: (_) => DiscountCalculatorProvider(prefs)),
+        ChangeNotifierProvider(create: (_) => SalesPriceProvider(prefs)),
+      ],
+      child: const MyApp(),
+    ),
+  );
+}
+```
+
+Key concepts:
+
+- **MultiProvider**: Exposes multiple providers to the entire widget tree
+- **ChangeNotifierProvider**: Creates and provides state management classes
+- **SharedPreferences**: Enables data persistence across app restarts
+
+<Note>
+  Your calculator inputs are automatically saved using `shared_preferences`. When you reopen the app, your last calculations will be restored.
+</Note>
+
+### Feature-First Structure
+
+Each feature in Numix is self-contained:
+
+```plaintext
+features/discount_calculator/
+├── screens/              # UI screens
+│   └── discount_calculator_screen.dart
+├── widgets/              # Reusable UI components
+└── providers/            # Business logic and state
+    └── discount_provider.dart
+```
+
+This architecture ensures:
+- **Isolation**: Features don't depend on each other
+- **Maintainability**: Easy to locate and modify code
+- **Testability**: Business logic is separated from UI
+- **Scalability**: New features can be added without affecting existing ones
+
+## Key Features at a Glance
+
+<CardGroup cols={2}>
+  <Card title="Discount Calculator" icon="percent">
+    - Dual discount types (percentage/fixed)
+    - Sequential multi-tier discounts
+    - Automatic tax calculation
+    - Input validation and error handling
+  </Card>
+  
+  <Card title="Sales Price Calculator" icon="dollar-sign">
+    - Markup and margin calculations
+    - Profit amount visibility
+    - Tax integration
+    - Real-time calculation updates
+  </Card>
+  
+  <Card title="Product Inventory" icon="boxes-stacked">
+    - Product tracking
+    - Quantity management
+    - Organized interface
+    - Quick access to product data
+  </Card>
+  
+  <Card title="Sales History" icon="clock-rotate-left">
+    - Transaction logging
+    - Historical data access
+    - Analysis and reporting
+    - Persistent storage
+  </Card>
+</CardGroup>
+
+## Data Persistence
+
+All your work in Numix is automatically saved. Here's how persistence works:
+
+```dart lib/features/discount_calculator/providers/discount_provider.dart
+void calculateDiscount({
+  required String originalPriceStr,
+  required String primaryDiscountStr,
+  String additionalDiscountStr = '',
+  String taxStr = '',
+}) {
+  _originalPriceInput = originalPriceStr;
+  _primaryDiscountInput = primaryDiscountStr;
+  _additionalDiscountInput = additionalDiscountStr;
+  _taxInput = taxStr;
+
+  // Save to persistent storage
+  _prefs.setString('disc_orig', originalPriceStr);
+  _prefs.setString('disc_pri', primaryDiscountStr);
+  _prefs.setString('disc_add', additionalDiscountStr);
+  _prefs.setString('disc_tax', taxStr);
+
+  _calculateInternal();
+}
+```
+
+Every time you enter a value, it's saved to local storage. When you restart the app, these values are automatically restored:
+
+```dart
+void _loadFromPrefs() {
+  _originalPriceInput = _prefs.getString('disc_orig') ?? '';
+  _primaryDiscountInput = _prefs.getString('disc_pri') ?? '';
+  _additionalDiscountInput = _prefs.getString('disc_add') ?? '';
+  _taxInput = _prefs.getString('disc_tax') ?? '';
+  
+  if (_originalPriceInput.isNotEmpty && _primaryDiscountInput.isNotEmpty) {
+    _calculateInternal();
+  }
+}
+```
+
+## Testing Your Setup
+
+Verify everything is working correctly:
+
+<Steps>
+  <Step title="Test Discount Calculator">
+    Enter these values in the Discount Calculator:
+    
+    - Original Price: 100
+    - Primary Discount: 20 (percentage)
+    - Additional Discount: 10 (percentage)
+    - Tax: 5
+    
+    Expected results:
+    - After first discount: $80 (saved $20)
+    - After second discount: $72 (saved $8 more)
+    - Tax: $3.60
+    - Final Price: $75.60
+  </Step>
+  
+  <Step title="Test Sales Price Calculator">
+    Enter these values in the Sales Price Calculator (Markup mode):
+    
+    - Cost: 50
+    - Profit Percentage: 100
+    - Tax: 10
+    
+    Expected results:
+    - Base Sale Price: $100
+    - Profit: $50
+    - Tax: $10
+    - Final Price: $110
+  </Step>
+  
+  <Step title="Test Data Persistence">
+    1. Enter values in any calculator
+    2. Close the app completely (don't just minimize)
+    3. Reopen the app
+    4. Navigate back to the calculator
+    5. Verify your values are still there
+  </Step>
+</Steps>
+
+## Development Tips
+
+<AccordionGroup>
+  <Accordion title="Hot Reload and Hot Restart">
+    During development, Flutter provides two powerful features:
+    
+    - **Hot Reload** (press `r`): Updates the UI instantly while preserving app state
+    - **Hot Restart** (press `R`): Restarts the app while maintaining the connection
+    
+    Use hot reload for UI changes and hot restart when you modify business logic or state.
+  </Accordion>
+  
+  <Accordion title="Theme Switching">
+    Numix supports both light and dark themes. The theme toggle is available in the app bar:
+    
+    ```dart
+    IconButton(
+      icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+      onPressed: () {
+        MyApp.of(context)?.toggleTheme();
+      },
+    )
+    ```
+    
+    Test your UI in both themes to ensure good visibility and aesthetics.
+  </Accordion>
+  
+  <Accordion title="Error Handling">
+    Numix has comprehensive error handling. Try entering invalid values to see how errors are displayed:
+    
+    - Negative numbers
+    - Percentages over 100%
+    - Non-numeric characters
+    - Empty required fields
+    
+    All errors are caught and displayed with user-friendly messages in Spanish.
+  </Accordion>
+  
+  <Accordion title="Running Tests">
+    Numix includes a comprehensive test suite. Run tests to verify calculations:
+    
+    ```bash
+    # Run all tests
+    flutter test
+    
+    # Run tests with coverage
+    flutter test --coverage
+    
+    # Run specific test file
+    flutter test test/features/discount_calculator_test.dart
+    ```
+    
+    The project enforces 100% test coverage for all mathematical calculation logic.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Now that you have Numix running, here are some things to explore:
+
+<CardGroup cols={2}>
+  <Card title="Explore the Architecture" icon="diagram-project">
+    Dive deeper into the domain-driven feature-first architecture and understand how features are isolated
+  </Card>
+  
+  <Card title="Review the Code" icon="code">
+    Examine the provider implementations to understand the business logic and state management patterns
+  </Card>
+  
+  <Card title="Run Tests" icon="flask">
+    Execute the test suite to see how mathematical calculations are validated
+  </Card>
+  
+  <Card title="Customize the Theme" icon="palette">
+    Modify the Material 3 theme in `main.dart` to match your brand colors
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="App won't start">
+    1. Ensure a device is connected: `flutter devices`
+    2. Clean the build: `flutter clean && flutter pub get`
+    3. Restart the device/emulator
+    4. Run with verbose logging: `flutter run -v`
+  </Accordion>
+  
+  <Accordion title="Calculations not persisting">
+    1. Check SharedPreferences initialization in `main.dart`
+    2. Verify you're waiting for async initialization:
+       ```dart
+       WidgetsFlutterBinding.ensureInitialized();
+       final prefs = await SharedPreferences.getInstance();
+       ```
+    3. Check device storage permissions
+  </Accordion>
+  
+  <Accordion title="Provider not found errors">
+    Ensure providers are properly registered in `main.dart`:
+    ```dart
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => DiscountCalculatorProvider(prefs)),
+        ChangeNotifierProvider(create: (_) => SalesPriceProvider(prefs)),
+      ],
+      child: const MyApp(),
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Get Help
+
+If you encounter issues not covered in this guide:
+
+1. Check the project's AI ecosystem documentation in `.ai/` directory
+2. Review the `AGENTS.md` file for architectural guidelines
+3. Run `flutter doctor` to verify your development environment
+4. Check the test suite for examples of correct usage
+
+<Warning>
+  This project is maintained with an AI ecosystem. Refer to `.ai/agents/` and `.ai/skills/` directories for detailed rules about architecture, state management, and mathematical precision.
+</Warning>
+
+---
+
+Congratulations! You now have Numix running and understand its core features. Start exploring the calculators and experience the power of professional commercial math calculations.

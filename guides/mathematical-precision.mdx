@@ -1,0 +1,215 @@
+---
+title: 'Mathematical Precision'
+description: 'Learn how Numix ensures accurate calculations and handles floating-point arithmetic'
+icon: 'calculator'
+---
+
+## Overview
+
+Numix is built with mathematical precision as a core principle. The application handles financial calculations where accuracy is critical, implementing multiple layers of validation and safe parsing to prevent errors and ensure reliable results.
+
+<Note>
+All mathematical operations in Numix are designed to avoid common floating-point arithmetic errors and provide accurate results for financial calculations.
+</Note>
+
+## Core Mathematical Engine
+
+Numix uses the `math_expressions` library (version 3.0.0) as its mathematical foundation. This library provides robust expression parsing and evaluation capabilities.
+
+### Why math_expressions?
+
+The library is specifically chosen for:
+- Safe expression evaluation without direct string execution
+- Protection against malformed input that could cause crashes
+- Consistent floating-point arithmetic
+- Professional-grade calculation reliability
+
+<Warning>
+Never use direct `eval()` or string-to-code execution for mathematical expressions in production applications. This can lead to security vulnerabilities and crashes.
+</Warning>
+
+## Safe Number Parsing
+
+All user input is safely parsed using Dart's `double.tryParse()` method, which returns `null` for invalid input instead of throwing exceptions.
+
+### Example from Discount Calculator
+
+Here's how Numix safely parses user input in the discount calculator:
+
+```dart
+final origPrice = double.tryParse(_originalPriceInput);
+final primaryDiscount = double.tryParse(_primaryDiscountInput);
+final additionalDiscount = _additionalDiscountInput.isEmpty ? 0.0 : double.tryParse(_additionalDiscountInput);
+final taxPercent = _taxInput.isEmpty ? 0.0 : double.tryParse(_taxInput);
+
+if (origPrice == null || primaryDiscount == null || additionalDiscount == null || taxPercent == null) {
+  _errorMessage = "Valores numéricos inválidos";
+  _clearResults();
+  notifyListeners();
+  return;
+}
+```
+
+<Tip>
+Always use `double.tryParse()` instead of `double.parse()` when handling user input. This prevents exceptions and allows graceful error handling.
+</Tip>
+
+## Validation Rules
+
+Numix implements comprehensive validation to ensure mathematical operations are valid and produce meaningful results.
+
+### Negative Value Prevention
+
+All calculators reject negative values for prices, costs, and percentages:
+
+```dart
+if (origPrice < 0 || primaryDiscount < 0 || additionalDiscount < 0 || taxPercent < 0) {
+  _errorMessage = "Los valores no pueden ser negativos";
+  _clearResults();
+  notifyListeners();
+  return;
+}
+```
+
+### Percentage Range Validation
+
+Percentage discounts are validated to ensure they don't exceed 100%:
+
+```dart
+if (_discountType == DiscountType.percentage) {
+  if (primaryDiscount > 100 || additionalDiscount > 100) {
+    _errorMessage = "Los porcentajes de descuento no pueden exceder 100%";
+    _clearResults();
+    notifyListeners();
+    return;
+  }
+}
+```
+
+### Logical Constraint Validation
+
+The application ensures that discounts don't exceed the original price:
+
+```dart
+if (totalFixedDiscount > origPrice) {
+  _errorMessage = "El descuento no puede ser mayor al precio original";
+  _clearResults();
+  notifyListeners();
+  return;
+}
+```
+
+## Calculation Accuracy
+
+### Sequential Discount Calculation
+
+When applying multiple percentage discounts, Numix correctly applies them sequentially (not additively) to reflect real-world discount stacking:
+
+```dart
+// Apply first discount
+double saved1 = currentPrice * (primaryDiscount / 100);
+currentPrice -= saved1;
+totalSaved += saved1;
+
+// Apply second discount to the already-discounted price
+if (additionalDiscount > 0) {
+  double saved2 = currentPrice * (additionalDiscount / 100);
+  currentPrice -= saved2;
+  totalSaved += saved2;
+}
+```
+
+<Note>
+Sequential discount calculation means a 20% discount followed by a 10% discount results in a total 28% discount, not 30%. This reflects how discounts actually work in retail.
+</Note>
+
+### Margin vs. Markup Calculations
+
+The Sales Price Calculator handles two different profit calculation methods:
+
+<CodeGroup>
+
+```dart Markup Calculation
+// Markup: Percentage added on top of cost
+_profitAmount = cost * (profitPercent / 100);
+_baseSalePrice = cost + _profitAmount!;
+```
+
+```dart Margin Calculation
+// Margin: Percentage of final sale price
+_baseSalePrice = cost / (1 - (profitPercent / 100));
+_profitAmount = _baseSalePrice! - cost;
+```
+
+</CodeGroup>
+
+<Warning>
+Margin percentage must be less than 100% as it represents a portion of the final sale price. Markup percentage can exceed 100% as it's added on top of the cost.
+</Warning>
+
+## Error Handling Strategy
+
+Numix follows a consistent error handling pattern across all calculators:
+
+1. **Clear previous errors** at the start of each calculation
+2. **Parse all inputs** using safe parsing methods
+3. **Validate business rules** specific to each calculator
+4. **Clear results** if validation fails
+5. **Notify listeners** to update the UI with error messages
+
+```dart
+void _calculateInternal() {
+  _errorMessage = null; // Clear previous errors
+
+  // Parse inputs safely
+  final cost = double.tryParse(_costInput);
+  final profitPercent = double.tryParse(_profitPercentInput);
+  final taxPercent = _taxInput.isEmpty ? 0.0 : double.tryParse(_taxInput);
+
+  // Validate parsing succeeded
+  if (cost == null || profitPercent == null || taxPercent == null) {
+    _errorMessage = "Valores numéricos inválidos";
+    _clearResults();
+    notifyListeners();
+    return;
+  }
+
+  // Continue with validation and calculation...
+}
+```
+
+## Precision Best Practices
+
+When working with Numix code or extending its functionality:
+
+1. **Always use `double.tryParse()`** for user input
+2. **Validate ranges** before performing calculations
+3. **Clear results** when validation fails
+4. **Use `null` to represent** "no result" instead of zero
+5. **Wrap calculations** in try-catch blocks when necessary
+6. **Test edge cases** including negative numbers, extremely large values, and invalid input
+
+<Tip>
+The test suite in `test/features/` contains comprehensive examples of edge cases and validation scenarios. Review these tests when implementing new calculators.
+</Tip>
+
+## Testing Mathematical Accuracy
+
+All mathematical operations must be thoroughly tested. Numix requires 100% test coverage for calculation logic:
+
+```dart
+test('Calculates sequential percentage discount correctly', () {
+  provider.calculateDiscount(
+    originalPriceStr: '100', 
+    primaryDiscountStr: '20',
+    additionalDiscountStr: '10',
+  );
+
+  expect(provider.errorMessage, isNull);
+  expect(provider.savedAmount, 28.0);
+  expect(provider.subtotal, 72.0);
+  expect(provider.finalPrice, 72.0);
+});
+```
+
+See the [Testing Guide](/guides/testing) for more information on testing mathematical operations.

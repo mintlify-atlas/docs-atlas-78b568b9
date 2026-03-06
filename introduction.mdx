@@ -1,0 +1,141 @@
+---
+title: Introduction to Numix
+description: A professional math suite for commercial calculations built with Flutter
+---
+
+## Welcome to Numix
+
+Numix is a professional-grade mobile application designed specifically for commercial math calculations. Built with Flutter, it provides a comprehensive suite of tools for business professionals, retail managers, and entrepreneurs who need precise mathematical calculations for pricing, discounts, and inventory management.
+
+## What is Numix?
+
+Numix is more than just a calculator app—it's a complete math suite that handles the complex calculations required for running a business. Whether you're calculating multi-tier discounts, determining optimal sales prices with different profit margins, or managing product inventory, Numix provides the tools you need with mathematical precision.
+
+## Who is Numix For?
+
+<CardGroup cols={2}>
+  <Card title="Retail Managers" icon="store">
+    Calculate discounts, pricing, and manage inventory with precision
+  </Card>
+  <Card title="Business Owners" icon="briefcase">
+    Determine optimal pricing strategies and profit margins
+  </Card>
+  <Card title="Sales Professionals" icon="chart-line">
+    Quick access to discount calculations and pricing tools
+  </Card>
+  <Card title="Financial Analysts" icon="calculator">
+    Accurate commercial math with transparent calculation logic
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Discount Calculator
+
+Calculate complex, multi-tier discounts with precision. Supports both percentage-based and fixed-amount discounts, with automatic tax calculations.
+
+- **Dual discount types**: Percentage or fixed amount
+- **Sequential discounts**: Apply multiple discounts in sequence
+- **Tax integration**: Automatic tax calculation on final price
+- **Persistent state**: Your calculations are saved automatically
+
+### Sales Price Calculator
+
+Determine the optimal sales price based on cost and desired profit margin. Supports two calculation methods: markup (profit over cost) and margin (profit over selling price).
+
+- **Markup calculation**: Add percentage profit to cost
+- **Margin calculation**: Calculate price from desired profit margin
+- **Tax support**: Include tax in final price calculations
+- **Real-time results**: Instant calculation as you type
+
+### Product Inventory Management
+
+Track your products, quantities, and pricing information in a single, organized interface.
+
+### Sales History
+
+Maintain a complete history of your sales transactions for analysis and reporting.
+
+## Why Numix?
+
+### Mathematical Precision
+
+Numix is built with mathematical accuracy as a core principle. The application uses the `math_expressions` library to ensure precise calculations and avoid floating-point arithmetic errors that can occur with standard calculations.
+
+<Note>
+  All numeric inputs are validated and parsed safely using `double.tryParse()` with comprehensive error handling to prevent crashes from invalid input.
+</Note>
+
+### Domain-Driven Feature-First Architecture
+
+Numix follows a strict Domain-Driven Design (DDD) approach with a feature-first architecture. This means:
+
+- **Isolated features**: Each feature (discount calculator, sales price calculator, etc.) is completely self-contained
+- **Clear separation**: UI components are "dumb" widgets that only display data and trigger events
+- **Business logic isolation**: All calculation logic, validation, and business rules reside in Providers and Services
+- **Maintainable codebase**: Easy to understand, test, and extend
+
+#### Architecture Structure
+
+The project is organized into two main directories:
+
+```plaintext
+lib/
+├── core/              # Shared utilities, themes, and constants
+└── features/          # Business domain features
+    ├── discount_calculator/
+    │   ├── screens/
+    │   ├── widgets/
+    │   └── providers/
+    ├── sales_price_calculator/
+    │   ├── screens/
+    │   ├── widgets/
+    │   └── providers/
+    ├── product_inventory/
+    ├── sales_history/
+    ├── home/
+    └── welcome/
+```
+
+### State Management with Provider
+
+Numix uses the `provider` package for state management, combined with `shared_preferences` for data persistence. This ensures:
+
+- **Efficient rendering**: Only widgets that need updates are rebuilt
+- **Data persistence**: Your inputs and calculations survive app restarts
+- **Clean code**: Separation between business logic and presentation
+
+<Warning>
+  The application enforces proper use of `context.read()` for triggering events and `context.watch()` or `Consumer` for reactive UI updates to maintain 60/120 fps performance.
+</Warning>
+
+## What Makes Numix Different?
+
+### Error-Safe by Design
+
+Every calculation is wrapped in error handling. Invalid inputs are caught and displayed to users with clear error messages instead of causing crashes.
+
+### Persistent State
+
+Your work is automatically saved. When you close and reopen the app, your last calculations are still there, ready to continue.
+
+### Material Design 3
+
+Built with Flutter's Material Design 3, Numix provides a modern, intuitive interface with both light and dark theme support.
+
+### Cross-Platform
+
+As a Flutter application, Numix runs natively on both iOS and Android devices with a single codebase, ensuring consistent behavior across platforms.
+
+## Get Started
+
+Ready to start using Numix? Head over to the [Installation](/installation) guide to set up your development environment, or jump straight to the [Quickstart](/quickstart) to get the app running in minutes.
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Set up your Flutter environment and install Numix
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get up and running with Numix in 5 minutes
+  </Card>
+</CardGroup>

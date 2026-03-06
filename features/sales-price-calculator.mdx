@@ -1,0 +1,249 @@
+---
+title: "Sales Price Calculator"
+description: "Determine optimal sales prices using markup or margin strategies"
+---
+
+## Overview
+
+The Sales Price Calculator helps businesses determine the right selling price for their products by calculating prices based on cost, desired profit, and tax. It supports two fundamental pricing strategies: **markup** (profit on cost) and **margin** (profit on sales).
+
+<CardGroup cols={2}>
+  <Card title="Markup Pricing" icon="arrow-trend-up">
+    Calculate price based on profit percentage over cost
+  </Card>
+  <Card title="Margin Pricing" icon="chart-pie">
+    Calculate price based on desired profit margin on sales
+  </Card>
+  <Card title="Profit Tracking" icon="sack-dollar">
+    See exact profit amounts in monetary terms
+  </Card>
+  <Card title="Tax Integration" icon="receipt">
+    Include tax in final customer pricing
+  </Card>
+</CardGroup>
+
+## Pricing Strategies
+
+Understanding the difference between markup and margin is crucial for accurate pricing:
+
+### Markup Method
+
+**Markup** is the profit percentage calculated **on top of the cost**. This is the most intuitive pricing method.
+
+**Formula**: `Sale Price = Cost + (Cost × Markup%)`
+
+```dart sales_price_provider.dart lines
+if (_marginType == MarginType.markup) {
+  _profitAmount = cost * (profitPercent / 100);
+  _baseSalePrice = cost + _profitAmount!;
+}
+```
+
+<Accordion title="Markup Example">
+  **Cost**: $50, **Markup**: 40%
+  
+  - Profit: $50 × 0.40 = **$20**
+  - Sale Price: $50 + $20 = **$70**
+  - Margin on sales: $20 / $70 = **28.57%** (not 40%!)
+</Accordion>
+
+### Margin Method
+
+**Margin** is the profit percentage calculated **as a percentage of the sale price**. This method is used when you know your target profit margin.
+
+**Formula**: `Sale Price = Cost / (1 - Margin%)`
+
+```dart sales_price_provider.dart lines
+else {
+  _baseSalePrice = cost / (1 - (profitPercent / 100));
+  _profitAmount = _baseSalePrice! - cost;
+}
+```
+
+<Accordion title="Margin Example">
+  **Cost**: $50, **Margin**: 40%
+  
+  - Sale Price: $50 / (1 - 0.40) = **$83.33**
+  - Profit: $83.33 - $50 = **$33.33**
+  - Markup on cost: $33.33 / $50 = **66.67%** (not 40%!)
+</Accordion>
+
+<Warning>
+**Critical Difference**: A 40% markup and a 40% margin produce **very different prices**:
+- 40% markup on $50 = $70 sale price
+- 40% margin on $50 = $83.33 sale price
+
+Always verify which method your business uses!
+</Warning>
+
+## Calculation Flow
+
+The calculator processes pricing in a clear sequence:
+
+<Steps>
+  <Step title="Parse and Validate Input">
+    All inputs are safely parsed to prevent invalid data from causing errors.
+    
+    ```dart sales_price_provider.dart lines
+    final cost = double.tryParse(_costInput);
+    final profitPercent = double.tryParse(_profitPercentInput);
+    final taxPercent = _taxInput.isEmpty ? 0.0 : double.tryParse(_taxInput);
+    
+    if (cost == null || profitPercent == null || taxPercent == null) {
+      _errorMessage = "Valores numéricos inválidos";
+      return;
+    }
+    ```
+  </Step>
+
+  <Step title="Apply Pricing Formula">
+    The appropriate formula (markup or margin) is applied based on the selected mode.
+  </Step>
+
+  <Step title="Calculate Tax">
+    Tax is added to the base sale price to determine the final customer price:
+    
+    ```dart sales_price_provider.dart lines
+    _taxAmount = _baseSalePrice! * (taxPercent / 100);
+    _finalPrice = _baseSalePrice! + _taxAmount!;
+    ```
+  </Step>
+
+  <Step title="Update UI">
+    All calculated values are exposed and the UI is notified to refresh.
+  </Step>
+</Steps>
+
+## Validation Rules
+
+The calculator enforces business logic to ensure valid calculations:
+
+<Accordion title="Negative Value Protection">
+  Cost, profit percentage, and tax must all be non-negative values.
+  
+  ```dart sales_price_provider.dart lines
+  if (cost < 0 || profitPercent < 0 || taxPercent < 0) {
+    _errorMessage = "Los valores no pueden ser negativos";
+    return;
+  }
+  ```
+</Accordion>
+
+<Accordion title="Margin Ceiling (< 100%)">
+  In margin mode, the profit margin must be less than 100%. A 100% margin would mean the entire sale price is profit with zero cost, which is mathematically invalid (division by zero).
+  
+  ```dart sales_price_provider.dart lines
+  if (_marginType == MarginType.margin && profitPercent >= 100) {
+    _errorMessage = "El margen sobre venta debe ser menor a 100%";
+    return;
+  }
+  ```
+</Accordion>
+
+<Note>
+There is **no upper limit** on markup percentage. A 200% markup is valid and means selling at 3× the cost.
+</Note>
+
+## Input Fields
+
+The calculator requires these inputs:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| Cost | Number | Yes | The cost to acquire or produce the item |
+| Profit Percentage | Number | Yes | Desired profit (interpreted as markup or margin) |
+| Tax Percentage | Number | No | Tax rate to add to the sale price |
+| Pricing Mode | Enum | Yes | Markup or Margin calculation method |
+
+## Output Values
+
+After calculation, these values are available:
+
+- **Base Sale Price**: Price before tax (your revenue per unit)
+- **Profit Amount**: Monetary profit per unit sold
+- **Tax Amount**: Tax to be collected from customer
+- **Final Price**: Total price customer pays (base price + tax)
+
+## State Persistence
+
+All inputs are automatically saved and restored:
+
+```dart sales_price_provider.dart lines
+_prefs.setString('sales_cost', costStr);
+_prefs.setString('sales_profit', profitPercentStr);
+_prefs.setString('sales_tax', taxStr);
+_prefs.setInt('sales_margin_type', type == MarginType.markup ? 0 : 1);
+```
+
+The calculator remembers your last calculation and pricing mode preference.
+
+<Tip>
+For complete API documentation, see the [Sales Price Provider API Reference](/api/sales-price-provider).
+</Tip>
+
+## Usage Examples
+
+### Example 1: Markup Pricing
+
+**Scenario**: You purchase inventory for $30 per unit and want a 50% markup, with 7% sales tax.
+
+<Steps>
+  <Step title="Enter Values">
+    - Cost: `30`
+    - Profit Percentage: `50`
+    - Mode: **Markup**
+    - Tax: `7`
+  </Step>
+
+  <Step title="Results">
+    - Base Sale Price: `$45.00` ($30 + $15)
+    - Profit: `$15.00`
+    - Tax: `$3.15` (7% of $45)
+    - Final Price: `$48.15`
+  </Step>
+</Steps>
+
+### Example 2: Margin Pricing
+
+**Scenario**: Your cost is $30 and you need a 40% profit margin to cover overhead, with 7% tax.
+
+<Steps>
+  <Step title="Enter Values">
+    - Cost: `30`
+    - Profit Percentage: `40`
+    - Mode: **Margin**
+    - Tax: `7`
+  </Step>
+
+  <Step title="Results">
+    - Base Sale Price: `$50.00` ($30 / 0.6)
+    - Profit: `$20.00`
+    - Tax: `$3.50` (7% of $50)
+    - Final Price: `$53.50`
+  </Step>
+</Steps>
+
+<Warning>
+Notice how the same cost ($30) with the same percentage (40%) produces **different prices** ($45 vs $50) depending on whether you use markup or margin mode.
+</Warning>
+
+## Quick Reference: Markup vs Margin
+
+| Aspect | Markup | Margin |
+|--------|--------|--------|
+| **Base** | Profit on **cost** | Profit on **sale price** |
+| **Formula** | Sale = Cost × (1 + Markup%) | Sale = Cost / (1 - Margin%) |
+| **Example** | 50% markup on $100 cost = $150 sale | 50% margin on $100 cost = $200 sale |
+| **Limit** | No upper limit | Must be < 100% |
+| **Common Use** | Retail pricing | Financial planning |
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="Discount Calculator" icon="percent" href="/features/discount-calculator">
+    Calculate discounted prices with multiple discount tiers
+  </Card>
+  <Card title="Mathematical Precision" icon="calculator" href="/guides/mathematical-precision">
+    Learn about Numix's mathematical accuracy approach
+  </Card>
+</CardGroup>

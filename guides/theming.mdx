@@ -1,0 +1,289 @@
+---
+title: 'Theming System'
+description: 'Customize the appearance of Numix with Material 3 theming and dark mode support'
+icon: 'palette'
+---
+
+## Overview
+
+Numix uses Flutter's Material 3 design system to provide a modern, consistent user interface. The application supports both light and dark themes with dynamic theme switching.
+
+<Note>
+Material 3 (Material You) is the latest version of Google's design system, featuring enhanced color systems, updated components, and improved accessibility.
+</Note>
+
+## Theme Configuration
+
+The theme system is configured in `main.dart` using a stateful approach that allows runtime theme switching.
+
+### App Structure
+
+```dart
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => MyAppState();
+
+  // Static method to access theme state from anywhere
+  static MyAppState? of(BuildContext context) =>
+      context.findAncestorStateOfType<MyAppState>();
+}
+```
+
+### Theme State Management
+
+The theme state is managed in `MyAppState`:
+
+```dart
+class MyAppState extends State<MyApp> {
+  bool _isDarkMode = false;
+
+  void toggleTheme() {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Numix',
+      debugShowCheckedModeBanner: false,
+      theme: _isDarkMode
+          ? ThemeData.dark(useMaterial3: true)
+          : ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+              useMaterial3: true,
+            ),
+      home: const WelcomeScreen(),
+    );
+  }
+}
+```
+
+<Tip>
+The `useMaterial3: true` flag enables Material 3 components and styling throughout the application.
+</Tip>
+
+## Light Theme
+
+The light theme uses a seed color approach, generating a complete color scheme from a single base color:
+
+```dart
+ThemeData(
+  colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+  useMaterial3: true,
+)
+```
+
+### Color Scheme Generation
+
+Material 3's `ColorScheme.fromSeed()` automatically generates:
+- Primary, secondary, and tertiary colors
+- Container colors and their "on" variants
+- Surface colors with appropriate contrast
+- Error colors
+- Inverse colors for special use cases
+
+<Note>
+The seed color (`Colors.blue`) influences the entire color palette, ensuring visual harmony across all UI elements.
+</Note>
+
+## Dark Theme
+
+The dark theme uses Flutter's built-in dark theme configuration:
+
+```dart
+ThemeData.dark(useMaterial3: true)
+```
+
+This provides:
+- Appropriate contrast ratios for dark environments
+- Reduced eye strain in low-light conditions
+- Consistent Material 3 styling
+- Proper elevation and surface colors
+
+## Theme Switching
+
+### Accessing Theme State
+
+To toggle the theme from anywhere in the app, use the static accessor:
+
+```dart
+// In any widget within the app
+MyApp.of(context)?.toggleTheme();
+```
+
+### Example: Theme Toggle Button
+
+Here's how you might implement a theme toggle button:
+
+```dart
+IconButton(
+  icon: Icon(
+    _isDarkMode ? Icons.light_mode : Icons.dark_mode,
+  ),
+  onPressed: () {
+    MyApp.of(context)?.toggleTheme();
+  },
+  tooltip: 'Toggle theme',
+)
+```
+
+<Warning>
+Always use the null-aware operator (`?.`) when calling `MyApp.of(context)` to handle cases where the context might not have access to the app state.
+</Warning>
+
+## Material 3 Components
+
+With Material 3 enabled, Numix automatically uses updated component styles:
+
+### Buttons
+- FilledButton (high emphasis)
+- OutlinedButton (medium emphasis)
+- TextButton (low emphasis)
+- FloatingActionButton (with updated shapes)
+
+### Cards and Containers
+- Updated elevation system
+- Rounded corners by default
+- Better surface color handling
+
+### Input Fields
+- Filled text fields by default
+- Updated focus indicators
+- Improved error states
+
+## Customizing the Theme
+
+### Changing the Seed Color
+
+To change the primary color throughout the app, modify the seed color:
+
+```dart
+ThemeData(
+  colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),
+  useMaterial3: true,
+)
+```
+
+### Adding Custom Theme Properties
+
+You can extend the theme with additional customizations:
+
+```dart
+ThemeData(
+  colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+  useMaterial3: true,
+  textTheme: TextTheme(
+    headlineLarge: TextStyle(
+      fontSize: 32,
+      fontWeight: FontWeight.bold,
+    ),
+  ),
+  cardTheme: CardTheme(
+    elevation: 2,
+    margin: EdgeInsets.all(8),
+  ),
+)
+```
+
+### Custom Dark Theme Configuration
+
+For more control over the dark theme, use the full constructor:
+
+```dart
+ThemeData(
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: Colors.blue,
+    brightness: Brightness.dark,
+  ),
+  useMaterial3: true,
+)
+```
+
+## Persisting Theme Preference
+
+To save the user's theme preference across app restarts, integrate with `SharedPreferences`:
+
+<CodeGroup>
+
+```dart Loading Saved Preference
+class MyAppState extends State<MyApp> {
+  bool _isDarkMode = false;
+  late SharedPreferences _prefs;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThemePreference();
+  }
+
+  Future<void> _loadThemePreference() async {
+    _prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isDarkMode = _prefs.getBool('isDarkMode') ?? false;
+    });
+  }
+}
+```
+
+```dart Saving Theme Changes
+void toggleTheme() {
+  setState(() {
+    _isDarkMode = !_isDarkMode;
+  });
+  _prefs.setBool('isDarkMode', _isDarkMode);
+}
+```
+
+</CodeGroup>
+
+<Tip>
+Numix already uses `SharedPreferences` for calculator state persistence. You can follow the same pattern used in the provider classes.
+</Tip>
+
+## Accessing Theme Colors
+
+In your widgets, access theme colors through the context:
+
+```dart
+// Get the current color scheme
+final colorScheme = Theme.of(context).colorScheme;
+
+// Use theme colors
+Container(
+  color: colorScheme.primaryContainer,
+  child: Text(
+    'Themed Container',
+    style: TextStyle(color: colorScheme.onPrimaryContainer),
+  ),
+)
+```
+
+### Common Color Usage
+
+- `primary` / `onPrimary`: Main brand color and text on it
+- `secondary` / `onSecondary`: Accent color and text on it
+- `surface` / `onSurface`: Background surfaces and text on them
+- `primaryContainer` / `onPrimaryContainer`: Contained components
+- `error` / `onError`: Error states and text
+
+<Note>
+Always use "on" colors for text/icons placed on their corresponding background to ensure proper contrast and accessibility.
+</Note>
+
+## Best Practices
+
+1. **Use theme colors** instead of hardcoded colors for consistency
+2. **Test both themes** during development to ensure proper contrast
+3. **Follow Material 3 guidelines** for component usage
+4. **Consider accessibility** by maintaining sufficient contrast ratios
+5. **Use semantic colors** (e.g., `error` for error states, not red)
+
+## Related Resources
+
+- [Material 3 Design Guidelines](https://m3.material.io)
+- [Flutter Material 3 Documentation](https://docs.flutter.dev/ui/design/material)
+- [Color System Overview](https://m3.material.io/styles/color/overview)

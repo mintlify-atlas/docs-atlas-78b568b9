@@ -1,0 +1,141 @@
+---
+title: Architecture Overview
+description: Understanding Numix's domain-driven feature-first architecture
+---
+
+## Introduction
+
+Numix is built on a **Domain-Driven Feature-First (DDD)** architecture that emphasizes modularity, separation of concerns, and scalability. This architectural approach ensures that each business domain is completely isolated and self-contained, making the codebase easier to maintain, test, and scale.
+
+<Note>
+  The architecture strictly enforces that UI components remain "dumb" - they only display data and trigger events, while all business logic resides in providers or services.
+</Note>
+
+## Core Principles
+
+<CardGroup cols={2}>
+  <Card title="Feature Isolation" icon="cube">
+    Each feature is a completely independent module with its own screens, widgets, providers, and business logic. Features don't depend on each other.
+  </Card>
+  
+  <Card title="Separation of Concerns" icon="layer-group">
+    Clear boundaries between UI (screens/widgets), state management (providers), and business logic (services) ensure maintainable code.
+  </Card>
+  
+  <Card title="Mathematical Precision" icon="calculator">
+    All calculations use `math_expressions` library with proper error handling to prevent floating-point errors and crashes.
+  </Card>
+  
+  <Card title="State Persistence" icon="save">
+    User inputs and calculations are automatically saved using `SharedPreferences`, providing seamless app restart recovery.
+  </Card>
+</CardGroup>
+
+## Directory Structure
+
+The `lib/` directory is organized into two main sections:
+
+### Features Directory
+
+The `features/` directory contains all business domains, where each feature is completely self-contained:
+
+```plaintext
+lib/features/
+├── discount_calculator/
+│   ├── providers/
+│   │   └── discount_provider.dart
+│   └── screens/
+│       └── discount_calculator_screen.dart
+├── sales_price_calculator/
+│   ├── providers/
+│   │   └── sales_price_provider.dart
+│   └── screens/
+│       └── sales_price_calculator_screen.dart
+├── product_inventory/
+│   └── screens/
+│       └── product_inventory_screen.dart
+├── sales_history/
+│   └── screens/
+│       └── sales_history_screen.dart
+├── home/
+│   └── screens/
+│       └── home_page.dart
+└── welcome/
+    └── screens/
+        └── welcome_screen.dart
+```
+
+<Tip>
+  Notice how each feature has its own `providers/` and `screens/` directories. Some features may also include `widgets/`, `services/`, or `models/` as needed.
+</Tip>
+
+### Core Directory (Planned)
+
+While not currently implemented, the architecture reserves space for a `core/` directory that would contain:
+
+- **Utilities**: App-wide helper functions and formatters
+- **Theme**: Material 3 theme configuration and constants
+- **Constants**: Global app constants and configurations
+- **Formatters**: Number formatting utilities for mathematical precision
+
+## Technology Stack
+
+| Component | Technology | Purpose |
+|-----------|-----------|----------|
+| **Framework** | Flutter (Dart ^3.6.0) | Cross-platform mobile development |
+| **State Management** | `provider` package | Reactive state management with `ChangeNotifier` |
+| **Persistence** | `shared_preferences` | Local key-value storage for state persistence |
+| **Math Engine** | `math_expressions` | Safe mathematical expression evaluation |
+| **UI Design** | Material Design 3 | Modern, consistent user interface |
+
+## Architectural Guarantees
+
+### 1. Dumb Widgets Pattern
+
+UI components are strictly presentational. They:
+- Display data received from providers
+- Trigger events through provider methods
+- Never contain business logic or calculations
+- Use `context.read()` for events and `context.watch()` for reactive updates
+
+### 2. Mathematical Safety
+
+All numerical operations follow strict safety rules:
+- Use `double.tryParse()` instead of `double.parse()` to prevent crashes
+- Wrap calculations in try-catch blocks for `FormatException` handling
+- Validate all inputs before performing calculations
+- Use precise decimal arithmetic to avoid floating-point errors
+
+### 3. Performance Optimization
+
+The architecture ensures optimal performance:
+- `context.read()` for one-time operations (no rebuilds)
+- `context.watch()` or `Consumer` only for reactive UI elements
+- Minimal widget rebuilds maintain 60/120 fps
+- Efficient state updates through `ChangeNotifier`
+
+## Development Workflow
+
+When adding new features to Numix:
+
+1. **Create Feature Directory**: Add a new directory under `lib/features/`
+2. **Implement Provider**: Create state management logic in `providers/`
+3. **Build UI**: Implement screens and widgets with no business logic
+4. **Register Provider**: Add to `MultiProvider` in `main.dart`
+5. **Test**: Write unit tests for provider logic (100% coverage required)
+
+<Note>
+  The codebase is maintained collaboratively with an AI ecosystem. See `AGENTS.md` and the `.ai/` directory for agent guidelines, skills, and architectural constraints.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Feature-First Architecture" icon="sitemap" href="/architecture/feature-first">
+    Deep dive into how features are structured and isolated
+  </Card>
+  
+  <Card title="State Management" icon="arrow-rotate-right" href="/architecture/state-management">
+    Learn about provider patterns and state persistence
+  </Card>
+</CardGroup>

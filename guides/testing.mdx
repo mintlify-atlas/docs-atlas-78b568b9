@@ -1,0 +1,476 @@
+---
+title: 'Testing Guide'
+description: 'Learn how to test Numix features and ensure mathematical accuracy'
+icon: 'flask'
+---
+
+## Overview
+
+Numix maintains a comprehensive test suite to ensure mathematical accuracy and application reliability. The project requires 100% test coverage for calculation logic, as precision is critical for financial calculations.
+
+<Warning>
+All mathematical operations and business logic must be thoroughly tested before deployment. Financial calculation errors can have serious real-world consequences.
+</Warning>
+
+## Test Structure
+
+Numix uses Flutter's built-in testing framework with tests organized to mirror the feature-first architecture:
+
+```
+test/
+└── features/
+    ├── discount_calculator/
+    │   └── providers/
+    │       └── discount_provider_test.dart
+    └── sales_price_calculator/
+        └── providers/
+            └── sales_price_provider_test.dart
+```
+
+## Running Tests
+
+### Run All Tests
+
+Execute the entire test suite:
+
+```bash
+flutter test
+```
+
+### Run Specific Test File
+
+Test a single feature:
+
+```bash
+flutter test test/features/discount_calculator/providers/discount_provider_test.dart
+```
+
+### Run with Coverage
+
+Generate a coverage report:
+
+```bash
+flutter test --coverage
+```
+
+<Tip>
+The project aims for 100% coverage of mathematical operations. Review coverage reports regularly to identify untested code paths.
+</Tip>
+
+## Test Anatomy
+
+### Basic Test Structure
+
+Numix tests follow the Arrange-Act-Assert pattern:
+
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:numix/features/discount_calculator/providers/discount_provider.dart';
+
+void main() {
+  group('DiscountCalculatorProvider', () {
+    late DiscountCalculatorProvider provider;
+    late SharedPreferences prefs;
+
+    setUp(() async {
+      // Arrange: Set up test environment
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
+      provider = DiscountCalculatorProvider(prefs);
+    });
+
+    test('Calculates simple percentage discount correctly', () {
+      // Act: Perform the calculation
+      provider.calculateDiscount(
+        originalPriceStr: '100', 
+        primaryDiscountStr: '20'
+      );
+
+      // Assert: Verify the results
+      expect(provider.errorMessage, isNull);
+      expect(provider.savedAmount, 20.0);
+      expect(provider.subtotal, 80.0);
+      expect(provider.finalPrice, 80.0);
+    });
+  });
+}
+```
+
+### Test Groups
+
+Organize related tests using `group()`:
+
+```dart
+group('DiscountCalculatorProvider', () {
+  // Multiple related tests
+  test('Initial values are null', () { ... });
+  test('Calculates simple discount', () { ... });
+  test('Handles invalid input', () { ... });
+});
+```
+
+## Testing Mathematical Operations
+
+### Testing Calculation Accuracy
+
+Verify that calculations produce correct results:
+
+```dart
+test('Calculates sequential percentage discount correctly', () {
+  provider.calculateDiscount(
+    originalPriceStr: '100', 
+    primaryDiscountStr: '20',
+    additionalDiscountStr: '10',
+  );
+
+  expect(provider.errorMessage, isNull);
+  expect(provider.savedAmount, 28.0);  // 20% + 10% of remaining
+  expect(provider.subtotal, 72.0);
+  expect(provider.finalPrice, 72.0);
+});
+```
+
+<Note>
+Sequential discounts: First discount is 20% of 100 = 20, leaving 80. Second discount is 10% of 80 = 8, leaving 72. Total saved is 28.
+</Note>
+
+### Testing Tax Calculations
+
+Ensure taxes are applied correctly to the discounted price:
+
+```dart
+test('Calculates correctly with tax', () {
+  provider.calculateDiscount(
+    originalPriceStr: '100', 
+    primaryDiscountStr: '20',
+    taxStr: '15',
+  );
+
+  expect(provider.errorMessage, isNull);
+  expect(provider.subtotal, 80.0);      // After discount
+  expect(provider.taxAmount, 12.0);     // 15% of 80
+  expect(provider.finalPrice, 92.0);    // 80 + 12
+});
+```
+
+### Testing Margin vs. Markup
+
+Verify both profit calculation methods:
+
+<CodeGroup>
+
+```dart Markup Test
+test('Calculates Markup correctly with tax', () {
+  provider.calculatePrice(
+    costStr: '100', 
+    profitPercentStr: '20', 
+    taxStr: '10'
+  );
+
+  expect(provider.profitAmount, 20.0);      // 20% of cost
+  expect(provider.baseSalePrice, 120.0);    // Cost + profit
+  expect(provider.taxAmount, 12.0);         // 10% of sale price
+  expect(provider.finalPrice, 132.0);       // Sale price + tax
+});
+```
+
+```dart Margin Test
+test('Calculates Gross Margin correctly', () {
+  provider.setMarginType(MarginType.margin);
+  provider.calculatePrice(
+    costStr: '80', 
+    profitPercentStr: '20'
+  );
+
+  expect(provider.profitAmount, 20.0);      // 20% of sale price
+  expect(provider.baseSalePrice, 100.0);    // Cost / (1 - margin%)
+  expect(provider.finalPrice, 100.0);
+});
+```
+
+</CodeGroup>
+
+## Testing Validation Rules
+
+### Testing Error Cases
+
+Verify that validation rules are properly enforced:
+
+```dart
+test('Percentage > 100 shows error', () {
+  provider.calculateDiscount(
+    originalPriceStr: '100', 
+    primaryDiscountStr: '110'
+  );
+
+  expect(provider.errorMessage, 'Los porcentajes de descuento no pueden exceder 100%');
+  expect(provider.finalPrice, isNull);
+});
+
+test('Negative values show error', () {
+  provider.calculateDiscount(
+    originalPriceStr: '-100', 
+    primaryDiscountStr: '20'
+  );
+
+  expect(provider.errorMessage, 'Los valores no pueden ser negativos');
+  expect(provider.finalPrice, isNull);
+});
+```
+
+### Testing Boundary Conditions
+
+Test edge cases and boundaries:
+
+```dart
+test('Fixed discount exceeds original price shows error', () {
+  provider.setDiscountType(DiscountType.fixedAmount);
+  provider.calculateDiscount(
+    originalPriceStr: '100', 
+    primaryDiscountStr: '120'
+  );
+
+  expect(provider.errorMessage, 'El descuento no puede ser mayor al precio original');
+  expect(provider.finalPrice, isNull);
+});
+
+test('Gross Margin fails if percentage is >= 100', () {
+  provider.setMarginType(MarginType.margin);
+  provider.calculatePrice(
+    costStr: '100', 
+    profitPercentStr: '100'
+  );
+
+  expect(provider.errorMessage, 'El margen sobre venta debe ser menor a 100%');
+  expect(provider.finalPrice, isNull);
+});
+```
+
+<Tip>
+Always test boundary conditions: zero values, maximum valid values, and values just beyond the valid range.
+</Tip>
+
+## Testing Input Validation
+
+### Invalid Number Strings
+
+Verify that non-numeric input is handled gracefully:
+
+```dart
+test('Sets error for invalid strings', () {
+  provider.calculatePrice(
+    costStr: 'abc', 
+    profitPercentStr: '20'
+  );
+  
+  expect(provider.errorMessage, 'Valores numéricos inválidos');
+  expect(provider.finalPrice, isNull);
+});
+```
+
+## Testing State Management
+
+### Testing Initial State
+
+Verify correct initialization:
+
+```dart
+test('Initial values are null', () {
+  expect(provider.finalPrice, isNull);
+  expect(provider.savedAmount, isNull);
+  expect(provider.subtotal, isNull);
+  expect(provider.taxAmount, isNull);
+  expect(provider.errorMessage, isNull);
+  expect(provider.discountType, DiscountType.percentage);
+});
+```
+
+### Testing State Clearing
+
+Ensure the clear method resets all state:
+
+```dart
+test('Clears values correctly', () {
+  provider.calculateDiscount(
+    originalPriceStr: '100', 
+    primaryDiscountStr: '20'
+  );
+  
+  provider.clear();
+
+  expect(provider.finalPrice, isNull);
+  expect(provider.savedAmount, isNull);
+  expect(provider.errorMessage, isNull);
+  expect(provider.originalPriceInput, '');
+});
+```
+
+## Testing Persistence
+
+### Testing SharedPreferences Integration
+
+Verify that state persists across provider instances:
+
+```dart
+test('Persists and loads data from SharedPreferences', () async {
+  // Save data with first provider instance
+  provider.calculateDiscount(
+    originalPriceStr: '200', 
+    primaryDiscountStr: '50'
+  );
+  
+  // Create new provider instance (simulates app restart)
+  final newProvider = DiscountCalculatorProvider(prefs);
+  
+  // Verify data was restored
+  expect(newProvider.originalPriceInput, '200');
+  expect(newProvider.primaryDiscountInput, '50');
+  expect(newProvider.finalPrice, 100.0);
+});
+```
+
+<Note>
+Use `SharedPreferences.setMockInitialValues({})` in `setUp()` to ensure a clean state for each test.
+</Note>
+
+## Writing New Tests
+
+When adding new features or calculators, follow this testing checklist:
+
+### Essential Test Cases
+
+1. **Happy Path Tests**
+   - Basic calculation with valid input
+   - Calculation with optional parameters
+   - Calculation with all parameters
+
+2. **Validation Tests**
+   - Invalid input strings
+   - Negative values
+   - Zero values
+   - Boundary conditions
+   - Business rule violations
+
+3. **State Management Tests**
+   - Initial state
+   - State after calculation
+   - State after clearing
+   - State persistence and restoration
+
+4. **Edge Cases**
+   - Empty strings
+   - Very large numbers
+   - Very small numbers
+   - Multiple rapid calculations
+
+### Example Test Template
+
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:numix/features/your_feature/providers/your_provider.dart';
+
+void main() {
+  group('YourProvider', () {
+    late YourProvider provider;
+    late SharedPreferences prefs;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
+      provider = YourProvider(prefs);
+    });
+
+    test('Initial state is correct', () {
+      // Test initial values
+    });
+
+    test('Calculates correctly with valid input', () {
+      // Test happy path
+    });
+
+    test('Handles invalid input gracefully', () {
+      // Test error handling
+    });
+
+    test('Validates business rules', () {
+      // Test domain-specific rules
+    });
+
+    test('Persists and restores state', () {
+      // Test SharedPreferences integration
+    });
+  });
+}
+```
+
+## Continuous Integration
+
+Numix tests should run automatically in CI/CD pipelines:
+
+```yaml
+# Example GitHub Actions configuration
+name: Tests
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: subosito/flutter-action@v2
+      - run: flutter pub get
+      - run: flutter test --coverage
+      - run: flutter test --coverage --coverage-path=coverage/lcov.info
+```
+
+<Warning>
+Never merge code that reduces test coverage below 100% for mathematical operations. All calculation logic must be fully tested.
+</Warning>
+
+## Debugging Tests
+
+### Print Debug Information
+
+```dart
+test('Debug calculation', () {
+  provider.calculateDiscount(
+    originalPriceStr: '100',
+    primaryDiscountStr: '20',
+  );
+  
+  print('Saved: ${provider.savedAmount}');
+  print('Subtotal: ${provider.subtotal}');
+  print('Final: ${provider.finalPrice}');
+  
+  expect(provider.finalPrice, 80.0);
+});
+```
+
+### Run Single Test
+
+```bash
+flutter test --plain-name="Calculates simple percentage discount correctly"
+```
+
+## Best Practices
+
+1. **Test behavior, not implementation** - Focus on what the code does, not how
+2. **Use descriptive test names** - Test names should clearly state what they verify
+3. **Keep tests independent** - Each test should run successfully in isolation
+4. **Test one thing at a time** - Each test should verify a single behavior
+5. **Use meaningful assertions** - Include multiple `expect()` calls to thoroughly verify results
+6. **Mock external dependencies** - Use mock SharedPreferences for isolated tests
+7. **Test error messages** - Verify that user-facing error messages are correct
+8. **Cover edge cases** - Don't just test the happy path
+
+<Tip>
+Run tests frequently during development. Fast feedback helps catch errors early and builds confidence in your code.
+</Tip>
+
+## Related Resources
+
+- [Flutter Testing Documentation](https://docs.flutter.dev/testing)
+- [Mathematical Precision Guide](/guides/mathematical-precision)
+- [Provider State Management](/features/discount-calculator)

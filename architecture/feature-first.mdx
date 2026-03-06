@@ -1,0 +1,375 @@
+---
+title: Feature-First Architecture
+description: Deep dive into Numix's feature isolation and domain-driven design
+---
+
+## What is Feature-First Architecture?
+
+Feature-First (also called Feature-Driven or Package-by-Feature) architecture organizes code around business features rather than technical layers. Instead of grouping all screens together, all providers together, etc., each feature contains everything it needs to function independently.
+
+<CardGroup cols={2}>
+  <Card title="Traditional Layered" icon="layer-group">
+    ```
+    lib/
+    ├── screens/
+    ├── widgets/
+    ├── providers/
+    └── services/
+    ```
+    Code organized by technical function
+  </Card>
+  
+  <Card title="Feature-First" icon="cubes">
+    ```
+    lib/features/
+    ├── discount_calculator/
+    ├── sales_price_calculator/
+    └── product_inventory/
+    ```
+    Code organized by business domain
+  </Card>
+</CardGroup>
+
+## Benefits of Feature-First Design
+
+### 1. Complete Isolation
+
+Each feature is a self-contained module that can be developed, tested, and maintained independently:
+
+- **No Cross-Feature Dependencies**: Features don't import from each other
+- **Parallel Development**: Multiple developers can work on different features simultaneously
+- **Easy Testing**: Test each feature in isolation without complex setup
+- **Simple Removal**: Delete a feature directory to remove functionality
+
+### 2. Scalability
+
+As the app grows, adding new features is straightforward:
+
+- Create a new feature directory
+- Implement the feature following established patterns
+- No need to modify existing features
+- Codebase remains organized regardless of size
+
+### 3. Clear Ownership
+
+Each feature directory clearly shows what belongs to that business domain:
+
+- All related code lives together
+- Easy to understand feature scope
+- Simplified code reviews
+- Clear boundaries for refactoring
+
+## Feature Structure
+
+Each feature in Numix follows a consistent internal structure:
+
+### Example: Discount Calculator Feature
+
+```plaintext
+lib/features/discount_calculator/
+├── providers/
+│   └── discount_provider.dart          # State management and business logic
+└── screens/
+    └── discount_calculator_screen.dart # UI presentation
+```
+
+### Example: Sales Price Calculator Feature
+
+```plaintext
+lib/features/sales_price_calculator/
+├── providers/
+│   └── sales_price_provider.dart       # Pricing calculation logic
+└── screens/
+    └── sales_price_calculator_screen.dart # Calculator UI
+```
+
+<Tip>
+  Features may also include `widgets/` for reusable UI components, `services/` for API calls or complex logic, and `models/` for data classes.
+</Tip>
+
+## Real Feature Example: Discount Calculator
+
+Let's examine how the discount calculator feature is structured:
+
+### Provider (Business Logic)
+
+The provider handles all calculations and state management:
+
+```dart lib/features/discount_calculator/providers/discount_provider.dart
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+enum DiscountType {
+  percentage,
+  fixedAmount,
+}
+
+class DiscountCalculatorProvider extends ChangeNotifier {
+  final SharedPreferences _prefs;
+
+  double? _subtotal;
+  double? _finalPrice;
+  double? _savedAmount;
+  double? _taxAmount;
+  String? _errorMessage;
+
+  DiscountType _discountType = DiscountType.percentage;
+
+  DiscountCalculatorProvider(this._prefs) {
+    _loadFromPrefs();
+  }
+
+  // Getters
+  double? get subtotal => _subtotal;
+  double? get finalPrice => _finalPrice;
+  String? get errorMessage => _errorMessage;
+
+  void calculateDiscount({
+    required String originalPriceStr,
+    required String primaryDiscountStr,
+    String additionalDiscountStr = '',
+    String taxStr = '',
+  }) {
+    // Save inputs for persistence
+    _prefs.setString('disc_orig', originalPriceStr);
+    _prefs.setString('disc_pri', primaryDiscountStr);
+
+    // Parse and validate
+    final origPrice = double.tryParse(originalPriceStr);
+    final primaryDiscount = double.tryParse(primaryDiscountStr);
+
+    if (origPrice == null || primaryDiscount == null) {
+      _errorMessage = "Valores numéricos inválidos";
+      notifyListeners();
+      return;
+    }
+
+    // Perform calculations...
+    _calculateInternal();
+  }
+}
+```
+
+### Screen (UI Presentation)
+
+The screen is a "dumb widget" that only displays data and triggers events:
+
+```dart lib/features/discount_calculator/screens/discount_calculator_screen.dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/discount_provider.dart';
+
+class ScreenOne extends StatefulWidget {
+  const ScreenOne({super.key});
+
+  @override
+  State<ScreenOne> createState() => _ScreenOneState();
+}
+
+class _ScreenOneState extends State<ScreenOne> {
+  final _originalPriceController = TextEditingController();
+  final _primaryDiscountController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Restore saved values from provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<DiscountCalculatorProvider>();
+      if (provider.originalPriceInput.isNotEmpty) {
+        _originalPriceController.text = provider.originalPriceInput;
+        _primaryDiscountController.text = provider.primaryDiscountInput;
+      }
+    });
+  }
+
+  void _calculateDiscount() {
+    // Trigger calculation through provider
+    context.read<DiscountCalculatorProvider>().calculateDiscount(
+      originalPriceStr: _originalPriceController.text,
+      primaryDiscountStr: _primaryDiscountController.text,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Watch for state changes
+    final provider = context.watch<DiscountCalculatorProvider>();
+
+    return Scaffold(
+      // UI rendering based on provider state
+    );
+  }
+}
+```
+
+<Note>
+  Notice how the screen uses `context.read()` for triggering actions and `context.watch()` for reactive updates. This ensures optimal performance.
+</Note>
+
+## Current Features in Numix
+
+Here are all the features currently implemented:
+
+<CardGroup cols={2}>
+  <Card title="Discount Calculator" icon="percent">
+    Calculate discounts with percentage or fixed amounts, including cascading discounts and tax calculation.
+    
+    **Location**: `lib/features/discount_calculator/`
+  </Card>
+  
+  <Card title="Sales Price Calculator" icon="dollar-sign">
+    Determine sales prices based on cost, markup/margin, and tax percentages.
+    
+    **Location**: `lib/features/sales_price_calculator/`
+  </Card>
+  
+  <Card title="Product Inventory" icon="boxes-stacked">
+    Manage product inventory tracking and stock levels.
+    
+    **Location**: `lib/features/product_inventory/`
+  </Card>
+  
+  <Card title="Sales History" icon="clock-rotate-left">
+    View and manage historical sales records.
+    
+    **Location**: `lib/features/sales_history/`
+  </Card>
+  
+  <Card title="Home" icon="house">
+    Main navigation hub for accessing all calculators and tools.
+    
+    **Location**: `lib/features/home/`
+  </Card>
+  
+  <Card title="Welcome" icon="hand-wave">
+    Onboarding screen shown on first app launch.
+    
+    **Location**: `lib/features/welcome/`
+  </Card>
+</CardGroup>
+
+## Adding a New Feature
+
+Follow these steps to add a new feature to Numix:
+
+### Step 1: Create Feature Directory
+
+```bash
+mkdir -p lib/features/my_feature/providers
+mkdir -p lib/features/my_feature/screens
+```
+
+### Step 2: Create Provider
+
+Create your state management class:
+
+```dart lib/features/my_feature/providers/my_provider.dart
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class MyFeatureProvider extends ChangeNotifier {
+  final SharedPreferences _prefs;
+
+  MyFeatureProvider(this._prefs) {
+    _loadFromPrefs();
+  }
+
+  void _loadFromPrefs() {
+    // Load persisted state
+  }
+
+  // Add your business logic methods
+}
+```
+
+### Step 3: Create Screen
+
+Build your UI:
+
+```dart lib/features/my_feature/screens/my_screen.dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/my_provider.dart';
+
+class MyFeatureScreen extends StatelessWidget {
+  const MyFeatureScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<MyFeatureProvider>();
+    
+    return Scaffold(
+      // Your UI here
+    );
+  }
+}
+```
+
+### Step 4: Register in main.dart
+
+Add your provider to the app:
+
+```dart lib/main.dart
+MultiProvider(
+  providers: [
+    ChangeNotifierProvider(
+      create: (_) => DiscountCalculatorProvider(prefs)
+    ),
+    ChangeNotifierProvider(
+      create: (_) => MyFeatureProvider(prefs)
+    ),
+  ],
+  child: const MyApp(),
+)
+```
+
+### Step 5: Add Navigation
+
+Link to your feature from the home screen:
+
+```dart
+ElevatedButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MyFeatureScreen()),
+    );
+  },
+  child: const Text('My Feature'),
+)
+```
+
+<Tip>
+  Always write unit tests for your provider logic. Numix enforces 100% test coverage for all mathematical operations.
+</Tip>
+
+## Best Practices
+
+### Do's ✅
+
+- Keep features completely independent
+- Put all feature-related code in the feature directory
+- Use descriptive feature names based on business domains
+- Follow the established directory structure
+- Write tests for each feature's provider logic
+
+### Don'ts ❌
+
+- Don't import from other features
+- Don't put business logic in widgets
+- Don't create shared state between features
+- Don't skip the provider layer
+- Don't forget to register providers in `main.dart`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="State Management" icon="arrow-rotate-right" href="/architecture/state-management">
+    Learn about provider patterns and state persistence
+  </Card>
+  
+  <Card title="Architecture Overview" icon="diagram-project" href="/architecture/overview">
+    Review the high-level architecture principles
+  </Card>
+</CardGroup>

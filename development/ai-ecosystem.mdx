@@ -1,0 +1,373 @@
+---
+title: AI Ecosystem
+description: Understanding the modular AI architecture that maintains Numix code quality
+---
+
+Numix is developed and maintained in collaboration with a sophisticated AI ecosystem. This modular architecture, inspired by `aitmpl.com`, ensures consistent code quality, architectural integrity, and rapid feature development.
+
+## Overview
+
+The AI ecosystem is organized in the `.ai/` directory with three main components:
+
+- **Agents**: Specialized system prompts for distinct roles
+- **Skills**: Strict domain rulesets and coding standards
+- **Commands**: Custom slash commands for rapid workflows
+
+<Note>
+  All AI agents working on Numix **must** read the relevant `.ai/` files before performing any task to understand boundaries, skills, and exact rules.
+</Note>
+
+## Directory Structure
+
+The `.ai/` directory is organized as follows:
+
+```
+.ai/
+├── agents/           # Specialized AI agents for specific roles
+│   ├── ui-ux-agent.md
+│   ├── qa-integration-agent.md
+│   ├── devops-agent.md
+│   ├── play-store-architect-agent.md
+│   └── tech-writer-agent.md
+├── skills/           # Domain rulesets and coding standards
+│   ├── clean-architecture-skill.md
+│   ├── provider-state-skill.md
+│   ├── math-precision-skill.md
+│   ├── git-ops-skill.md
+│   └── devsecops-workflow-skill.md
+└── commands/         # Custom workflow commands
+    └── verify-math.md
+```
+
+## Agents
+
+Agents are specialized AI assistants with focused expertise in specific domains.
+
+### UI/UX Agent
+
+**File**: `.ai/agents/ui-ux-agent.md`
+
+**Role**: Specialist in Flutter widget tree optimization, Material Design 3, animations, and accessible UIs.
+
+**Key Responsibilities**:
+- Responsive design using `BoxConstraints` instead of hardcoded heights
+- Material 3 theming with `Theme.of(context).colorScheme`
+- Fluid micro-interactions and animations
+- Ensuring widgets remain "dumb" and logic-free
+
+**Example Rule**:
+```dart
+// ❌ Bad: Hardcoded height
+Container(height: 80, child: Text('Hello'))
+
+// ✅ Good: Responsive constraints
+Container(
+  constraints: BoxConstraints(minHeight: 80),
+  child: Expanded(
+    child: Text(
+      'Hello',
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    ),
+  ),
+)
+```
+
+### QA Integration Agent
+
+**File**: `.ai/agents/qa-integration-agent.md`
+
+**Role**: Specialist in testing, ensuring robust user flows and 100% math coverage.
+
+**Key Responsibilities**:
+- Self-healing test loops (fix code until all tests pass)
+- 100% unit test coverage for calculation providers (mandatory)
+- Proper mocking with `SharedPreferences.setMockInitialValues()`
+- Edge case testing: division by zero, null inputs, negative numbers, large numbers
+
+**Validation Loop**:
+```bash
+flutter test
+# If fails -> analyze error -> fix code -> repeat
+# Task complete only when: flutter analyze && flutter test = 0 issues
+```
+
+### DevOps Agent
+
+**File**: `.ai/agents/devops-agent.md`
+
+**Role**: Specialist in native compilation (Gradle, Kotlin, iOS Pods) and CI/CD pipelines.
+
+**Key Responsibilities**:
+- Managing dependencies with `flutter pub get`
+- Keeping native build tools up to date (AGP, Gradle, Kotlin)
+- Filtering verbose device logs during development
+- CI/CD pipeline maintenance
+
+### Play Store Architect Agent
+
+**File**: `.ai/agents/play-store-architect-agent.md`
+
+**Role**: Specialist in Android deployments, Google Play policies, and release security.
+
+**Key Responsibilities**:
+- Enforcing `.aab` bundles (never APKs) for Play Store submissions
+- Code obfuscation with `--obfuscate --split-debug-info`
+- Secure app signing with `key.properties` (excluded from Git)
+- Target SDK compliance (API 34+)
+
+**Build Command**:
+```bash
+flutter build appbundle --obfuscate --split-debug-info=./debug-info
+```
+
+### Tech Writer Agent
+
+**File**: `.ai/agents/tech-writer-agent.md`
+
+**Role**: Specialist in documentation, README maintenance, and code comments.
+
+**Key Responsibilities**:
+- Keeping README.md synchronized with current architecture
+- DartDoc comments for public classes and providers
+- Commenting complex logic (especially math formulas)
+- Updating `.ai/` manifest when patterns change
+
+**Comment Philosophy**:
+```dart
+// ❌ Bad: Obvious comment
+// Returns the final price
+return finalPrice;
+
+// ✅ Good: Explains 'why'
+// Apply Gross Margin formula: Cost / (1 - percentage/100)
+// This differs from markup as it accounts for the final selling price
+return cost / (1 - (percentage / 100));
+```
+
+## Skills
+
+Skills are strict domain rulesets that enforce coding standards and architectural patterns.
+
+### Clean Architecture Skill
+
+**File**: `.ai/skills/clean-architecture-skill.md`
+
+**Focus**: Scalability and Domain-Driven Design (Feature-First) enforcement.
+
+**Core Rules**:
+
+1. **Directory Structure**:
+   - `lib/core/`: Utilities, themes, constants, formatters
+   - `lib/features/`: Isolated feature domains
+   - Core cannot depend on features
+
+2. **Feature Isolation**: Each feature contains its own `screens/`, `providers/`, `widgets/`, and `models/`
+
+3. **Naming Conventions**:
+   - Classes/Enums: `UpperCamelCase` (e.g., `SalesPriceProvider`)
+   - Files/Folders: `snake_case` (e.g., `sales_price_provider.dart`)
+   - Variables/Methods: `lowerCamelCase`
+   - Private Members: Prefix with `_`
+
+### Provider State Skill
+
+**File**: `.ai/skills/provider-state-skill.md`
+
+**Focus**: Performance, preventing UI jank, and zero-loss state persistence.
+
+**Core Rules**:
+
+1. **Rebuild Optimization**:
+   ```dart
+   // ❌ Bad: Entire screen rebuilds
+   class MyScreen extends StatelessWidget {
+     @override
+     Widget build(BuildContext context) {
+       final provider = context.watch<MyProvider>();
+       return Scaffold(...);
+     }
+   }
+
+   // ✅ Good: Only specific widgets rebuild
+   class MyScreen extends StatelessWidget {
+     @override
+     Widget build(BuildContext context) {
+       return Scaffold(
+         body: Consumer<MyProvider>(
+           builder: (context, provider, child) => Text(provider.value),
+         ),
+       );
+     }
+   }
+   ```
+
+2. **Event Dispatching**:
+   ```dart
+   // Use context.read() for events
+   ElevatedButton(
+     onPressed: () => context.read<MyProvider>().calculate(),
+     child: Text('Calculate'),
+   )
+   ```
+
+3. **No setState for Logic**: Business logic must be in `ChangeNotifier`, not `StatefulWidget`
+
+4. **Persistence**: Save user inputs to `SharedPreferences` immediately, restore on screen re-entry
+
+### Math Precision Skill
+
+**File**: `.ai/skills/math-precision-skill.md`
+
+**Focus**: Strict number formatting, floating-point error prevention, and robust parsing.
+
+**Core Rules**:
+
+1. **Safe Parsing**:
+   ```dart
+   // ❌ Bad: Can throw FormatException
+   double value = double.parse(userInput);
+
+   // ✅ Good: Graceful handling
+   double? value = double.tryParse(userInput);
+   if (value == null) {
+     // Handle invalid input
+   }
+   ```
+
+2. **Floating-Point Handling**:
+   ```dart
+   // Standard arithmetic: 0.1 + 0.2 = 0.30000000000000004
+   // Display formatted:
+   final displayed = result.toStringAsFixed(2); // "0.30"
+   ```
+
+3. **Advanced Formulas**:
+   - **Markup**: `Cost + (Cost × % / 100)`
+   - **Gross Margin**: `Cost / (1 - (% / 100))`
+   - **Cascading Discounts**: Apply percentages sequentially, not additively
+
+4. **Validation Rules**:
+   - Prevent negative prices/costs
+   - Prevent margins or discounts ≥ 100% when invalid
+
+### Git Ops Skill
+
+**File**: `.ai/skills/git-ops-skill.md`
+
+**Focus**: Clean Git history, conventional commits, and atomic versioning.
+
+**Conventional Commits Format**:
+
+- `feat(scope):` New feature
+- `fix(scope):` Bug fix
+- `refactor(scope):` Code change (not bug fix or feature)
+- `chore(scope):` Build tasks, dependencies, maintenance
+- `test(scope):` Adding or updating tests
+- `docs(scope):` Documentation only
+
+**Example Commits**:
+```bash
+feat(discount): add cascading discount calculation
+fix(sales-price): prevent negative gross margin values
+test(inventory): add edge case tests for zero quantity
+docs(readme): update architecture diagram
+```
+
+**Atomic Commits**: Commit after each logical unit of work is complete and verified.
+
+### DevSecOps Workflow Skill
+
+**File**: `.ai/skills/devsecops-workflow-skill.md`
+
+**Focus**: Secure code pipelines, branch management, and CI/CD pre-validation.
+
+**Core Rules**:
+
+1. **Branch Bunkering**:
+   - Never code on `main`
+   - All development on `dev` or feature branches
+   - `main` is strictly for stable releases
+
+2. **Pre-Push Validation**:
+   ```bash
+   flutter analyze && flutter test
+   # Both must pass before pushing
+   ```
+
+3. **Secret Management**:
+   - Never commit `.env`, `key.properties`, `*.jks`, `*.keystore`
+   - Use `.gitignore` strictly
+   - Use GitHub Action Secrets for CI/CD
+
+4. **CI/CD Alignment**: Local tests and CI must agree; diagnose CI logs if discrepancies exist
+
+## Commands
+
+Custom slash commands provide rapid workflow automation.
+
+### Verify Math Command
+
+**File**: `.ai/commands/verify-math.md`
+
+**Alias**: `/verify-math`
+
+**Action Sequence**:
+```bash
+flutter analyze
+flutter test test/features/
+# Verify 100% of math provider tests pass
+# Report concise summary
+```
+
+This ensures mathematical accuracy and complete test coverage.
+
+## Evolution Mandate
+
+<Warning>
+  The AI ecosystem is a **living structure**. When new libraries are added or architectural decisions are made, create new `skill` or `agent` files in `.ai/` to document the patterns.
+</Warning>
+
+**Example Evolution**:
+- Added `riverpod`? Create `.ai/skills/riverpod-skill.md`
+- Need GraphQL integration? Create `.ai/agents/graphql-agent.md`
+- New testing framework? Update `.ai/agents/qa-integration-agent.md`
+
+## Operational Safety Rules
+
+1. **Never execute destructive commands** (`git reset --hard`, `rm -rf`) without explicit user permission
+2. **Construct absolute paths** for all file modifications
+3. **Read `.ai/` files** before any task to understand context and constraints
+
+## Core Project Stack
+
+The AI ecosystem enforces these technology choices:
+
+- **Framework**: Flutter (Dart ^3.6.0)
+- **State Management**: `provider` + `shared_preferences`
+- **Math Engine**: `math_expressions`
+- **Architecture**: Domain-Driven Feature-First
+- **Testing**: `flutter_test` with 100% math coverage
+- **Linting**: `flutter_lints` (^5.0.0)
+
+## Benefits of the AI Ecosystem
+
+1. **Consistency**: All AI agents follow the same architectural rules
+2. **Quality**: Automated enforcement of testing and code standards
+3. **Documentation**: Self-documenting through `.ai/` files
+4. **Scalability**: Easy to add new agents and skills as project grows
+5. **Maintainability**: Clear separation of concerns and responsibilities
+
+## Contributing to the AI Ecosystem
+
+When you identify new patterns or standards:
+
+1. Create a new file in the appropriate `.ai/` subdirectory
+2. Follow the existing format (Role, Focus, Rules/Guidelines)
+3. Be specific with code examples
+4. Update `AGENTS.md` to reference the new file
+5. Commit with: `docs(ai): add new [agent/skill/command] for [purpose]`
+
+<Note>
+  The AI ecosystem is what makes Numix development fast, consistent, and high-quality. Treat these files as first-class documentation.
+</Note>
