@@ -1,0 +1,104 @@
+{
+  "projectType": "frontend",
+  "projectName": "Numix",
+  "projectDescription": "A professional math suite mobile application for commercial management, including calculators for discounts, sales pricing, inventory, and sales history.",
+  "theme": "almond",
+  "primaryColor": "#2196F3",
+  "lightColor": "#64B5F6",
+  "darkColor": "#1976D2",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/discount-calculator",
+              "features/sales-price-calculator",
+              "features/product-inventory",
+              "features/sales-history"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/feature-first",
+              "architecture/state-management"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/mathematical-precision",
+              "guides/theming",
+              "guides/testing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Providers",
+            "pages": [
+              "api/discount-provider",
+              "api/sales-price-provider"
+            ]
+          },
+          {
+            "group": "Screens",
+            "pages": [
+              "api/screens"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/setup",
+              "development/ai-ecosystem",
+              "development/code-standards"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Discount Calculator with percentage and fixed amount modes",
+    "Sales Price Calculator with markup and margin calculations",
+    "Product Inventory Management",
+    "Sales History Tracking",
+    "Mathematical precision with math_expressions library",
+    "Dark/Light theme support",
+    "State persistence with SharedPreferences",
+    "Feature-first Domain-Driven Design architecture"
+  ],
+  "publicApiSurface": [
+    "DiscountCalculatorProvider",
+    "SalesPriceProvider",
+    "DiscountCalculatorScreen",
+    "SalesPriceCalculatorScreen",
+    "ProductInventoryScreen",
+    "SalesHistoryScreen",
+    "MyHomePage",
+    "WelcomeScreen",
+    "DiscountType (enum)",
+    "MarginType (enum)"
+  ]
+}
